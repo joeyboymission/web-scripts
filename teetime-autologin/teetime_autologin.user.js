@@ -131,7 +131,10 @@ let members = {
 
 // Add new date cycling state
 let dateRetryCount = 0;
-const MAX_DATE_RETRIES = 7; // Maximum number of days to try
+const MAX_DATE_RETRIES = 5; // Maximum number of days to try from current date
+
+// Add date range constants
+const MAX_DAYS_AHEAD = 5; // Maximum days ahead from current date
 
 // Store automation state
 function saveState() {
@@ -937,13 +940,19 @@ function setupAlertHandler() {
                 bookingDate = nextDate;
                 
                 // Update UI if exists
-                const dateInput = document.getElementById('bookingDateInput');
+                const dateInput = document.querySelector(input[name="golfdate2"]);
                 if (dateInput) dateInput.value = nextDate;
+
+                const timeSelect = document.querySelector('select[name="time"]');
+                if (timeSelect && !timeSelect.disabled) {
+                    // Time slot is available, stop scanning
+                    return;
+                }
                 
                 // Try to rebook with new date
                 setTimeout(() => {
                     tryBooking(nextDate);
-                }, 2500);
+                }, 3000);
                 
                 return; // Prevent original alert
             } else {
@@ -953,7 +962,7 @@ function setupAlertHandler() {
         }
         
         // Show original alert for other messages
-        originalAlert(message);
+        originalAlert.call(window, message);
     };
 }
 
@@ -974,12 +983,31 @@ function tryBooking(date) {
         dateInput.dispatchEvent(new Event('change', { bubbles: true }));
         dateInput.dispatchEvent(new Event('input', { bubbles: true }));
         
-        // Call the website's form submit function if it exists
-        if (typeof SubmitFormData2 === 'function') {
-            SubmitFormData2();
-        }
-        
         updateStatus(`Trying date: ${date} (Attempt ${dateRetryCount}/${MAX_DATE_RETRIES})`);
+
+        // Add debounce delay to check time select availability
+        setTimeout(() => {
+            const timeSelect = document.querySelector('select[name="time"]');
+            
+            if (timeSelect && !timeSelect.disabled) {
+                // Time select is available and enabled
+                updateStatus(`Date ${date} is available for booking`);
+                
+                // Check if there are enabled options
+                const hasEnabledOptions = Array.from(timeSelect.options)
+                    .some(option => !option.disabled && option.value);
+                
+                if (hasEnabledOptions) {
+                    updateStatus(`Found available time slots for ${date}`);
+                    return true;
+                }
+            }
+            
+            // If we get here, either no time select or no enabled options
+            updateStatus(`No available slots for ${date}, will try next date`);
+            handleBookingError("FULLY_BOOKED");
+            
+        }, 3000); // 3 second delay to ensure page updates
         
     } catch (error) {
         console.error("Error during booking retry:", error);
@@ -1295,33 +1323,31 @@ function handleBookingError(errorType) {
 
     // Try next day if fully booked or maintenance
     if (errorType === "FULLY_BOOKED" || errorType === "MAINTENANCE") {
-        const nextDay = getNextDay(bookingDate);
-        updateStatus(`${errorType}: Trying next day (${nextDay})`);
-        bookingDate = nextDay;
+        const remainingRetries = calculateRemainingRetries(bookingDate);
         
-        // Clear and update date input
-        const dateInput = document.querySelector('#golfdate2');
-        if (dateInput) {
-            dateInput.value = nextDay;
-            dateInput.setAttribute('value', nextDay);
+        if (remainingRetries > 0) {
+            const nextDay = getNextDay(bookingDate);
+            updateStatus(`${errorType}: Trying next day (${nextDay}). ${remainingRetries} days remaining to check.`);
+            bookingDate = nextDay;
             
-            // Trigger date change events
-            ['change', 'input'].forEach(eventType => {
-                dateInput.dispatchEvent(new Event(eventType, { bubbles: true }));
-            });
-
-            // Trigger the website's date change function
-            if (typeof SubmitFormData2 === 'function') {
-                try {
+            const dateInput = document.querySelector('#golfdate2');
+            if (dateInput) {
+                dateInput.value = nextDay;
+                dateInput.setAttribute('value', nextDay);
+                
+                dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+                if (typeof SubmitFormData2 === 'function') {
                     SubmitFormData2();
-                } catch (error) {
-                    console.error("Error updating form:", error);
                 }
             }
+            
+            saveState();
+        } else {
+            updateStatus("❌ Reached maximum date range (5 days from current date)");
+            if (isDebugMode) {
+                console.log("Date range exhausted");
+            }
         }
-
-        // Save the new state
-        saveState();
         return;
     }
 
@@ -1338,6 +1364,259 @@ function handleBookingError(errorType) {
         } catch (error) {
             console.error("Error resetting form:", error);
         }
+    }
+}
+
+// Add function to check if time slots are available
+function checkTimeSlots() {
+    const timeSelect = document.querySelector('#eightminutes');
+    if (!timeSelect) return false;
+
+    // Check if there are any enabled options (excluding the default "Select Time" option)
+    const enabledOptions = Array.from(timeSelect.options).filter(opt => 
+        !opt.disabled && opt.value && opt.value !== ''
+    );
+
+    if (enabledOptions.length > 0) {
+        updateStatus(`✅ Found ${enabledOptions.length} available time slots`);
+        handleAvailableTimeSlots(enabledOptions);
+        return true;
+    }
+
+    return false;
+}
+
+// Add function to handle available time slots
+function handleAvailableTimeSlots(availableOptions) {
+    // Stop searching for more dates since we found available slots
+    dateRetryCount = MAX_DATE_RETRIES; // This will prevent further date cycling
+    
+    if (isDebugMode) {
+        console.log("Available times:", availableOptions.map(opt => opt.value));
+    }
+
+    // Proceed with time slot selection logic
+    // ... rest of your time slot handling code ...
+}
+// Check if selected time slots match available options
+const foundSlots = selectedTimes.filter(selectedTime => {
+    return availableOptions.some(opt => opt.value.startsWith(selectedTime));
+});
+
+if (foundSlots.length > 0) {
+    updateStatus(`✅ Found ${foundSlots.length} matching time slots`);
+    
+    // If in debug mode, don't actually book
+    if (isDebugMode) {
+        console.log("Debug mode: Would book these slots:", foundSlots);
+        return;
+    }
+
+    // Try to book the first available matching slot
+    const timeSelect = document.querySelector('#eightminutes');
+    if (timeSelect) {
+        const slotToBook = foundSlots[0];
+        const matchingOption = availableOptions.find(opt => opt.value.startsWith(slotToBook));
+        
+        if (matchingOption) {
+            timeSelect.value = matchingOption.value;
+            timeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            // Fill in member details if provided
+            Object.entries(members).forEach(([memberKey, member]) => {
+                if (member.firstName || member.lastName) {
+                    const memberNum = memberKey.replace('member', '');
+                    const firstNameInput = document.querySelector(`input[name="member${memberNum}_firstname"]`);
+                    const lastNameInput = document.querySelector(`input[name="member${memberNum}_lastname"]`);
+                    
+                    if (firstNameInput) firstNameInput.value = member.firstName;
+                    if (lastNameInput) lastNameInput.value = member.lastName;
+                }
+            });
+
+            // Submit the booking
+            const bookingForm = document.querySelector('form[name="theform"]');
+            if (bookingForm) {
+                updateStatus("📝 Submitting booking...");
+            }
+        }
+    }
+} else {
+    updateStatus("No matching time slots available");
+    handleBookingError("NO_MATCHING_SLOTS");
+}
+
+// Modify tryBooking to include time slot check
+function tryBooking(date) {
+    const dateInput = document.querySelector('#golfdate2');
+    if (!dateInput) return;
+
+    try {
+        dateInput.value = date;
+        dateInput.setAttribute('value', date);
+        dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+        // Add delay to wait for time slots to load
+        setTimeout(() => {
+            if (checkTimeSlots()) {
+                updateStatus("Found available date and time slots");
+            } else {
+                // If no time slots available, treat as fully booked
+                handleBookingError("FULLY_BOOKED");
+            }
+        }, 1000);
+
+    } catch (error) {
+        console.error("Error during booking retry:", error);
+        updateStatus("Error checking availability");
+    }
+}
+
+// Add utility function to check date range
+function calculateRemainingRetries(selectedDate) {
+    const currentDate = new Date();
+    const maxDate = new Date(currentDate);
+    maxDate.setDate(maxDate.getDate() + MAX_DAYS_AHEAD);
+    
+    const selected = new Date(selectedDate);
+    const daysRemaining = Math.floor((maxDate - selected) / (1000 * 60 * 60 * 24));
+    
+    return Math.max(0, daysRemaining);
+}
+
+// Add delay utility function
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Modify tryBooking to wait for time slots element
+async function tryBooking(date) {
+    const dateInput = document.querySelector('#golfdate2');
+    if (!dateInput) {
+        console.error("Date input not found");
+        return;
+    }
+
+    try {
+        // Update the date input
+        dateInput.value = date;
+        dateInput.setAttribute('value', date);
+        dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+        
+        // Call the website's form submit function
+        if (typeof SubmitFormData2 === 'function') {
+            SubmitFormData2();
+        }
+        
+        updateStatus(`Checking availability for ${date}...`);
+        
+        // Wait for time slots to load (3 seconds)
+        await delay(3000);
+        
+        // Check for time slots element
+        const timeSelect = document.querySelector('#eightminutes');
+        if (timeSelect) {
+            // Element exists, check for available slots
+            const availableSlots = Array.from(timeSelect.options).filter(opt => 
+                !opt.disabled && opt.value && opt.value !== ''
+            );
+
+            if (availableSlots.length > 0) {
+                updateStatus(`✅ Date ${date} is available with ${availableSlots.length} time slots`);
+                handleAvailableTimeSlots(availableSlots);
+                return true;
+            }
+        }
+        
+        // If we get here, either no time select element or no available slots
+        updateStatus(`No available slots for ${date}, trying next day...`);
+        handleBookingError("FULLY_BOOKED");
+        
+    } catch (error) {
+        console.error("Error during booking retry:", error);
+        updateStatus("Error checking availability");
+    }
+}
+
+// Modify handleBookingError for better flow
+async function handleBookingError(errorType) {
+    console.log(`Booking error: ${errorType}`);
+    
+    if (errorType === "FULLY_BOOKED" || errorType === "MAINTENANCE") {
+        const remainingRetries = calculateRemainingRetries(bookingDate);
+        
+        if (remainingRetries > 0) {
+            const nextDay = getNextDay(bookingDate);
+            updateStatus(`${errorType}: Will try next day (${nextDay}) in 3 seconds...`);
+            bookingDate = nextDay;
+            
+            // Wait before trying next date
+            await delay(3000);
+            
+            // Try booking with new date
+            tryBooking(nextDay);
+        } else {
+            updateStatus("❌ Reached maximum date range (5 days from current date)");
+            if (isDebugMode) {
+                console.log("Date range exhausted");
+            }
+        }
+        return;
+    }
+
+    // Handle other errors
+    // ...rest of existing error handling code...
+}
+
+// Modify handleAvailableTimeSlots to process found slots
+function handleAvailableTimeSlots(availableOptions) {
+    // Stop date cycling since we found available slots
+    dateRetryCount = MAX_DATE_RETRIES;
+    
+    if (isDebugMode) {
+        console.log("Available times:", availableOptions.map(opt => opt.value));
+    }
+
+    // Check if any of our selected times match available slots
+    const foundSlots = selectedTimes.filter(selectedTime => 
+        availableOptions.some(opt => opt.value === selectedTime)
+    );
+
+    if (foundSlots.length > 0) {
+        updateStatus(`✅ Found ${foundSlots.length} matching time slots`);
+        // Process booking if not in debug mode
+        if (!isDebugMode) {
+            processBooking(foundSlots[0]);
+        }
+    } else {
+        updateStatus("Selected time slots not available for this date");
+    }
+}
+
+// Add new function to process actual booking
+async function processBooking(timeSlot) {
+    const timeSelect = document.querySelector('#eightminutes');
+    if (!timeSelect) return;
+
+    try {
+        timeSelect.value = timeSlot;
+        timeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        
+        // Fill member details
+        await fillMemberDetails();
+        
+        updateStatus(`🎯 Ready to book slot: ${timeSlot}`);
+        
+        // Submit form if not in debug mode
+        if (!isDebugMode) {
+            const form = document.querySelector('form[name="theform"]');
+            if (form) {
+                form.submit();
+            }
+        }
+    } catch (error) {
+        console.error("Error during booking process:", error);
+        updateStatus("Error processing booking");
     }
 }
 
