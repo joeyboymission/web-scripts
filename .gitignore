@@ -1,5 +1,6 @@
 # ENV File
 .env
 
-# Report File
+# Files
 report.txt
+draft_info.txt
