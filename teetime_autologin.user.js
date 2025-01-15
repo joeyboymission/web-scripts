@@ -478,7 +478,7 @@ const formHTML = `
     };
   }
 
-  initializeForm(); // Initialize form after creation
+  initializeFormElements(); // Initialize form after creation
 }
 
 function validateInputs() {
@@ -535,7 +535,7 @@ function scheduleAutomation() {
 }
 
 // Handle login and subsequent actions
-function handleLogin() {
+function handleLoginProcess() {
     updateStatus("Starting login process...");
     const page = getCurrentPage();
     
@@ -1038,7 +1038,7 @@ function restoreFormState() {
 }
 
 // Add this to createCredentialForm after form creation
-function initializeForm() {
+function initializeFormElements() {
     const formContentEl = document.getElementById('formContent');
     const minimizeBtnEl = document.getElementById('minimizeForm');
     
@@ -1239,7 +1239,7 @@ const memberSelectHTML = `
 `;
 
 // Update initialization
-function initializeForm() {
+function initializeFormElements() {
     const formContentEl = document.getElementById('formContent');
     const minimizeBtnEl = document.getElementById('minimizeForm');
     
@@ -1293,3 +1293,162 @@ ${memberSelectHTML}
 // ...rest of createCredentialForm code...
 
 // ...existing code...
+
+/* global bootstrap */
+// ...existing UserScript block...
+
+// Add form element references
+let formContentElement = null;
+let minimizeBtnElement = null;
+
+// ...existing variable declarations...
+
+// Update form restoration with proper element references
+function restoreFormState() {
+    if (!formContentElement || !minimizeBtnElement) {
+        formContentElement = document.getElementById('formContent');
+        minimizeBtnElement = document.getElementById('minimizeForm');
+    }
+
+    // Set form visibility
+    isFormVisible = localStorage.getItem("formVisible") !== "false";
+    if (formContentElement) {
+        formContentElement.style.display = isFormVisible ? "block" : "none";
+    }
+    if (minimizeBtnElement) {
+        minimizeBtnElement.textContent = isFormVisible ? "−" : "+";
+    }
+
+    const status = document.getElementById("status");
+    if (status) {
+        status.style.marginTop = isFormVisible ? "10px" : "0";
+        status.style.borderTop = isFormVisible ? "1px solid #eee" : "none";
+    }
+
+    // Restore selected time slots
+    if (selectedTimes.length > 0) {
+        const checkboxes = document.querySelectorAll('.time-slots input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = selectedTimes.includes(checkbox.value);
+        });
+    }
+}
+
+// Single member fields update function
+function updateMemberFieldsVisibility(memberCount) {
+    // Hide all member fields by default
+    const allMemberFields = document.querySelectorAll('[id^="member"]');
+    const allMemberLabels = document.querySelectorAll('label[for^="member"]');
+    
+    allMemberFields.forEach(field => { field.style.display = 'none'; });
+    allMemberLabels.forEach(label => { label.style.display = 'none'; });
+
+    // Show only relevant fields based on member count
+    if (memberCount >= 2) {
+        const member2Fields = [
+            document.getElementById('member2Input_firstName'),
+            document.getElementById('member2Input_lastName'),
+            document.querySelector('label[for="member2Input_firstName"]')
+        ];
+        member2Fields.forEach(el => el && (el.style.display = 'block'));
+    }
+    
+    if (memberCount >= 3) {
+        const member3Fields = [
+            document.getElementById('member3Input_firstName'),
+            document.getElementById('member3Input_lastName'),
+            document.querySelector('label[for="member3Input_firstName"]')
+        ];
+        member3Fields.forEach(el => el && (el.style.display = 'block'));
+    }
+}
+
+// Single initialization function
+function initializeFormElements() {
+    formContentElement = document.getElementById('formContent');
+    minimizeBtnElement = document.getElementById('minimizeForm');
+    
+    if (formContentElement && minimizeBtnElement) {
+        setupTimeSlotHandlers();
+        setupDateTimeValidation();
+        restoreFormState();
+        
+        // Initialize member fields
+        const memberSelect = document.getElementById('memberSelect');
+        if (memberSelect) {
+            memberSelect.value = '2';
+            numberOfMembers = 2;
+            updateMemberFieldsVisibility(2);
+            
+            memberSelect.addEventListener('change', (e) => {
+                const count = parseInt(e.target.value);
+                numberOfMembers = count;
+                updateMemberFieldsVisibility(count);
+                saveState();
+            });
+        }
+    }
+}
+
+// Update case blocks with proper scope
+function handleLoginProcess() {
+    updateStatus("Starting login process...");
+    const page = getCurrentPage();
+    
+    switch(page) {
+        case "login": {
+            const loginForm = document.querySelector("form");
+            if (loginForm) {
+                const userInput = loginForm.querySelector('input[name="membersid"]');
+                const passwordInput = loginForm.querySelector('input[name="password"]');
+                if (userInput && passwordInput) {
+                    userInput.value = userName;
+                    passwordInput.value = password;
+                    const rememberCheckbox = loginForm.querySelector("input[type=checkbox]");
+                    if (rememberCheckbox) rememberCheckbox.click();
+                    isAutomationActive = true;
+                    saveState();
+                    updateStatus("Login simulation completed");
+                }
+            }
+            break;
+        }
+        case "course-selection": {
+            handleGolfCourseSelection();
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+// Update form creation to use new references
+function createCredentialForm() {
+    if (document.getElementById("credentialForm")) return;
+
+    const formHTML = `
+        // ...existing form HTML...
+        <div id="memberFields">
+            <div id="member2Fields">
+                <label for="member2Input_firstName" style="display: none;">Member 2:</label>
+                <input type="text" id="member2Input_firstName" placeholder="First Name" style="display: none;">
+                <input type="text" id="member2Input_lastName" placeholder="Last Name" style="display: none;">
+            </div>
+            <div id="member3Fields">
+                <label for="member3Input_firstName" style="display: none;">Member 3:</label>
+                <input type="text" id="member3Input_firstName" placeholder="First Name" style="display: none;">
+                <input type="text" id="member3Input_lastName" placeholder="Last Name" style="display: none;">
+            </div>
+        </div>
+        // ...rest of form HTML...
+    `;
+
+    // ...existing form creation code...
+    
+    initializeFormElements(); // Use new initialization
+}
+
+// Remove duplicate functions and rename handleLogin
+const handleLogin = handleLoginProcess;
+
+// ...rest of existing code...
