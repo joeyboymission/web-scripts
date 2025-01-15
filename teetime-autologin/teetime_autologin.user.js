@@ -129,6 +129,10 @@ let members = {
     member4: { firstName: '', lastName: '' }
 };
 
+// Add new date cycling state
+let dateRetryCount = 0;
+const MAX_DATE_RETRIES = 7; // Maximum number of days to try
+
 // Store automation state
 function saveState() {
   const state = {
@@ -485,8 +489,9 @@ function validateInputs() {
   }
   
   if (currentPage === 'course-selection') {
-      if (!bookingDate) {
-          alert('Please select booking date');
+      // Validate booking date format
+      if (!bookingDate || !/^\d{4}-\d{2}-\d{2}$/.test(bookingDate)) {
+          alert('Please select a valid booking date (YYYY-MM-DD)');
           return false;
       }
       if (selectedTimes.length === 0) {
@@ -545,6 +550,60 @@ async function handleLogin() {
       handleGolfCourseSelection();
       break;
   }
+}
+
+// Modify handleGolfCourseSelection to handle the date setting
+function handleGolfCourseSelection() {
+  // Reset retry counter
+  dateRetryCount = 0;
+  
+  updateStatus("Attempting golf course selection...");
+
+  if (window.golfSelectionTimeout) {
+    clearTimeout(window.golfSelectionTimeout);
+  }
+
+  window.golfSelectionTimeout = setTimeout(() => {
+    const courseSelect = document.querySelector('select[name="golfcourse"]');
+    const dateInput = document.querySelector('#golfdate2');
+
+    if (courseSelect && dateInput) {
+      updateStatus("Selecting course and date...");
+
+      try {
+        requestAnimationFrame(() => {
+          // Set golf course
+          const courseValue = selectedCourse || GOLF_COURSES.MIDLANDS_FB;
+          courseSelect.value = courseValue;
+
+          // Set date
+          dateInput.value = bookingDate;
+          dateInput.setAttribute('value', bookingDate);
+
+          // Trigger events for both fields
+          [courseSelect, dateInput].forEach(element => {
+            ['change', 'input'].forEach(eventType => {
+              element.dispatchEvent(new Event(eventType, {
+                bubbles: true,
+                cancelable: true
+              }));
+            });
+          });
+
+          // Special handling for date's onchange function
+          if (typeof SubmitFormData2 === 'function') {
+            SubmitFormData2();
+          }
+
+          updateStatus(`Selected course: ${GOLF_COURSE_NAMES[courseValue]} | Date: ${bookingDate}`);
+          startPolicyModalWatch();
+        });
+      } catch (error) {
+        console.error("Error during course/date selection:", error);
+        updateStatus("Error in selection process");
+      }
+    }
+  }, 2500);
 }
 
 function handleGolfCourseSelection() {
@@ -852,33 +911,110 @@ function handlePageTransition() {
   }
 }
 
+// Add utility function for date handling
+function getNextDate(currentDate) {
+    const date = new Date(currentDate);
+    date.setDate(date.getDate() + 1);
+    return date.toISOString().split('T')[0];
+}
+
+// Add new alert handler for booking errors
+function setupAlertHandler() {
+    const originalAlert = window.alert;
+    window.alert = function(message) {
+        console.log("Alert intercepted:", message);
+
+        // Handle booking errors
+        if (message.includes("FULLY BOOKED") || message.includes("MAINTENANCE DAY")) {
+            console.log(`Booking error detected: ${message}`);
+            
+            if (dateRetryCount < MAX_DATE_RETRIES) {
+                dateRetryCount++;
+                const nextDate = getNextDate(bookingDate);
+                console.log(`Attempting next date: ${nextDate}`);
+                
+                // Update booking date
+                bookingDate = nextDate;
+                
+                // Update UI if exists
+                const dateInput = document.getElementById('bookingDateInput');
+                if (dateInput) dateInput.value = nextDate;
+                
+                // Try to rebook with new date
+                setTimeout(() => {
+                    tryBooking(nextDate);
+                }, 2500);
+                
+                return; // Prevent original alert
+            } else {
+                console.log("Maximum retry attempts reached");
+                updateStatus("❌ No available dates found within retry limit");
+            }
+        }
+        
+        // Show original alert for other messages
+        originalAlert(message);
+    };
+}
+
+// Add new booking retry function
+function tryBooking(date) {
+    const dateInput = document.querySelector('#golfdate2');
+    if (!dateInput) {
+        console.error("Date input not found");
+        return;
+    }
+
+    try {
+        // Update the date input
+        dateInput.value = date;
+        dateInput.setAttribute('value', date);
+        
+        // Trigger change events
+        dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+        dateInput.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        // Call the website's form submit function if it exists
+        if (typeof SubmitFormData2 === 'function') {
+            SubmitFormData2();
+        }
+        
+        updateStatus(`Trying date: ${date} (Attempt ${dateRetryCount}/${MAX_DATE_RETRIES})`);
+        
+    } catch (error) {
+        console.error("Error during booking retry:", error);
+        updateStatus("Error during booking retry");
+    }
+}
+
 // Modified init function
 function init() {
-  try {
-    const hasState = loadState();
-    lastUrl = window.location.href;
+    setupAlertHandler();
+    try {
+        const hasState = loadState();
+        lastUrl = window.location.href;
 
-    if (!hasState) {
-      cleanupAutomation();
+        if (!hasState) {
+            cleanupAutomation();
+        }
+
+        ensureFormExists();
+        updateButtonStates(); // Ensure buttons are in correct state
+
+        if (hasState && isAutomationActive) {
+            handlePageTransition();
+        }
+
+        // Start observers
+        startClock();
+        pageObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: false,
+        });
+    } catch (error) {
+        console.error("Error during initialization:", error);
     }
-
-    ensureFormExists();
-    updateButtonStates(); // Ensure buttons are in correct state
-
-    if (hasState && isAutomationActive) {
-      handlePageTransition();
-    }
-
-    // Start observers
-    startClock();
-    pageObserver.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: false,
-    });
-  } catch (error) {
-    console.error("Error during initialization:", error);
-  }
 }
 
 // Reduce form check frequency
@@ -1024,3 +1160,184 @@ function initializeForm() {
   setupTimeSlotHandlers();
   restoreFormState();
 }
+
+// Add alert message constants
+const ALERT_MESSAGES = {
+    FULLY_BOOKED: 'FULLY BOOKED. Please choose other golfcourse and date.',
+    MAINTENANCE: 'MAINTENANCE DAY. Please choose other golfcourse and date.'
+};
+
+// Store the original alert only once at the top level
+if (typeof window._originalAlert === 'undefined') {
+    window._originalAlert = window.alert;
+    
+    // Override the default alert to catch specific messages
+    window.alert = function(message) {
+        console.log("Alert intercepted:", message);
+        
+        if (message === ALERT_MESSAGES.FULLY_BOOKED || message === ALERT_MESSAGES.MAINTENANCE) {
+            const errorType = message === ALERT_MESSAGES.FULLY_BOOKED ? "FULLY_BOOKED" : "MAINTENANCE";
+            updateStatus(`${errorType} detected - trying next day automatically`);
+            handleBookingError(errorType);
+            return;
+        }
+        
+        window._originalAlert(message);
+    };
+}
+
+// Add booking error handler
+function handleBookingError(errorType) {
+    console.log(`Booking error: ${errorType}`);
+    
+    // If in debug mode, show additional information
+    if (isDebugMode) {
+        console.log({
+            course: selectedCourse,
+            date: bookingDate,
+            times: selectedTimes
+        });
+    }
+
+    // Clear the date input on the website
+    const dateInput = document.querySelector('#golfdate2');
+    if (dateInput) {
+        dateInput.value = '';
+        dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // Attempt to reset form state
+    if (typeof SubmitFormData2 === 'function') {
+        try {
+            SubmitFormData2();
+        } catch (error) {
+            console.error("Error resetting form:", error);
+        }
+    }
+}
+
+// Modify handleGolfCourseSelection to include error handling
+function handleGolfCourseSelection() {
+    updateStatus("Attempting golf course selection...");
+
+    if (window.golfSelectionTimeout) {
+        clearTimeout(window.golfSelectionTimeout);
+    }
+
+    window.golfSelectionTimeout = setTimeout(() => {
+        const courseSelect = document.querySelector('select[name="golfcourse"]');
+        const dateInput = document.querySelector('#golfdate2');
+
+        if (courseSelect && dateInput) {
+            updateStatus("Selecting course and date...");
+
+            try {
+                requestAnimationFrame(() => {
+                    // Set golf course
+                    const courseValue = selectedCourse || GOLF_COURSES.MIDLANDS_FB;
+                    courseSelect.value = courseValue;
+
+                    // Set date with error handling
+                    try {
+                        dateInput.value = bookingDate;
+                        dateInput.setAttribute('value', bookingDate);
+
+                        // Trigger events for both fields
+                        [courseSelect, dateInput].forEach(element => {
+                            ['change', 'input'].forEach(eventType => {
+                                element.dispatchEvent(new Event(eventType, {
+                                    bubbles: true,
+                                    cancelable: true
+                                }));
+                            });
+
+                            // Special handling for date's onchange function
+                            if (typeof SubmitFormData2 === 'function') {
+                                SubmitFormData2();
+                            }
+
+                            updateStatus(`Selected course: ${GOLF_COURSE_NAMES[courseValue]} | Date: ${bookingDate}`);
+                            startPolicyModalWatch();
+                        });
+                    } catch (dateError) {
+                        console.error("Date selection error:", dateError);
+                        updateStatus("Error setting date");
+                        handleBookingError("DATE_ERROR");
+                    }
+                });
+            } catch (error) {
+                console.error("Error during course/date selection:", error);
+                updateStatus("Error in selection process");
+            }
+        }
+    }, 2500);
+}
+
+// Add date handling utilities
+function getNextDay(dateString) {
+    const date = new Date(dateString);
+    date.setDate(date.getDate() + 1);
+    return date.toISOString().split('T')[0];
+}
+
+// Modify booking error handler to try next day
+function handleBookingError(errorType) {
+    console.log(`Booking error: ${errorType}`);
+    
+    if (isDebugMode) {
+        console.log({
+            course: selectedCourse,
+            date: bookingDate,
+            times: selectedTimes,
+            error: errorType
+        });
+    }
+
+    // Try next day if fully booked or maintenance
+    if (errorType === "FULLY_BOOKED" || errorType === "MAINTENANCE") {
+        const nextDay = getNextDay(bookingDate);
+        updateStatus(`${errorType}: Trying next day (${nextDay})`);
+        bookingDate = nextDay;
+        
+        // Clear and update date input
+        const dateInput = document.querySelector('#golfdate2');
+        if (dateInput) {
+            dateInput.value = nextDay;
+            dateInput.setAttribute('value', nextDay);
+            
+            // Trigger date change events
+            ['change', 'input'].forEach(eventType => {
+                dateInput.dispatchEvent(new Event(eventType, { bubbles: true }));
+            });
+
+            // Trigger the website's date change function
+            if (typeof SubmitFormData2 === 'function') {
+                try {
+                    SubmitFormData2();
+                } catch (error) {
+                    console.error("Error updating form:", error);
+                }
+            }
+        }
+
+        // Save the new state
+        saveState();
+        return;
+    }
+
+    // Handle other errors as before
+    const dateInput = document.querySelector('#golfdate2');
+    if (dateInput) {
+        dateInput.value = '';
+        dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    if (typeof SubmitFormData2 === 'function') {
+        try {
+            SubmitFormData2();
+        } catch (error) {
+            console.error("Error resetting form:", error);
+        }
+    }
+}
+
