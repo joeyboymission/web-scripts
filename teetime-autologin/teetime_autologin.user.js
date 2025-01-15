@@ -32,6 +32,9 @@ let automationTimeout = null;
 // Add clock timer variable
 let clockTimer = null;
 
+// Add debug flag at the top with other variables
+let isDebugMode = true; // Set to false when ready for production
+
 // Golf course configuration
 const GOLF_COURSES = {
   HIGHLANDS: "1", // Highlands Golf Course
@@ -276,29 +279,30 @@ function startClock() {
 function updateStatus(message) {
   const status = document.getElementById("status");
   if (status) {
-    const preserveActive = message.includes("Policy accepted");
-    const stateMessage = preserveActive
-      ? "🟢 Active"
-      : isAutomationActive
-      ? "🟢 Active"
-      : "⚪ Standby";
-
-    status.innerHTML = `
-            <div class="status-message" style="margin-bottom: 4px;">${message}</div>
-            <div style="color: #888; font-size: 11px; display: flex; flex-direction: column; gap: 2px;">
-                <div>Status: ${stateMessage}</div>
-                <div>Page: ${getCurrentPage()}</div>
-                <div>Date: ${new Date().toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "2-digit",
-                  day: "2-digit",
-                })} | Time: ${new Date().toLocaleTimeString("en-US", {
+    const now = new Date();
+    const dateString = now.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const timeString = now.toLocaleTimeString("en-US", {
       hour12: false,
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
       fractionalSecondDigits: 3,
-    })}</div>
+    });
+
+    const currentPage = getCurrentPage();
+    const stateMessage = isAutomationActive ? "🟢 Active" : "⚪ Standby";
+    const debugIndicator = isDebugMode ? "🔧 Debug Mode" : "";
+
+    status.innerHTML = `
+            <div style="margin-bottom: 4px;">${message}</div>
+            <div style="color: #888; font-size: 11px; display: flex; flex-direction: column; gap: 2px;">
+                <div>Status: ${stateMessage} ${debugIndicator}</div>
+                <div>Page: ${currentPage}</div>
+                <div>Date: ${dateString} | Time: ${timeString}</div>
             </div>
         `;
   }
@@ -493,38 +497,6 @@ function validateInputs() {
   }
   
   return true;
-}
-
-// Modified updateStatus function
-function updateStatus(message) {
-  const status = document.getElementById("status");
-  if (status) {
-    const now = new Date();
-    const dateString = now.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-    const timeString = now.toLocaleTimeString("en-US", {
-      hour12: false,
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      fractionalSecondDigits: 3,
-    });
-
-    const currentPage = getCurrentPage();
-    const stateMessage = isAutomationActive ? "🟢 Active" : "⚪ Standby";
-
-    status.innerHTML = `
-            <div style="margin-bottom: 4px;">${message}</div>
-            <div style="color: #888; font-size: 11px; display: flex; flex-direction: column; gap: 2px;">
-                <div>Status: ${stateMessage}</div>
-                <div>Page: ${currentPage}</div>
-                <div>Date: ${dateString} | Time: ${timeString}</div>
-            </div>
-        `;
-  }
 }
 
 function scheduleAutomation() {
@@ -989,6 +961,13 @@ async function handleBooking() {
                       lastNameInput.value = member.lastName;
                   }
               });
+
+              // Debug mode check before submission
+              if (isDebugMode) {
+                  updateStatus(`DEBUG MODE: Would have booked ${timeSlot} - Form submission prevented`);
+                  console.log('Debug mode active - Form not submitted');
+                  return true;
+              }
               
               updateStatus(`Booking successful for ${timeSlot}`);
               return true;
