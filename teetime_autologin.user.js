@@ -15,6 +15,9 @@
 // @grant        GM_getValue
 // ==/UserScript==
 
+// Add to top of file after UserScript block
+/* global bootstrap */
+
 // Store credentials and scheduling info
 let userName = "";
 let password = "";
@@ -276,36 +279,37 @@ function startClock() {
   }, 100); // Update every 100ms for smooth time display
 }
 
-// Modified updateStatus function
+// Single updateStatus function
 function updateStatus(message) {
-  const status = document.getElementById("status");
-  if (status) {
-    const preserveActive = message.includes("Policy accepted");
-    const stateMessage = preserveActive
-      ? "🟢 Active"
-      : isAutomationActive
-      ? "🟢 Active"
-      : "⚪ Standby";
+    const status = document.getElementById("status");
+    if (status) {
+        const now = new Date();
+        const dateString = now.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+        });
+        const timeString = now.toLocaleTimeString("en-US", {
+            hour12: false,
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            fractionalSecondDigits: 3
+        });
 
-    status.innerHTML = `
+        const currentPage = getCurrentPage();
+        const stateMessage = isAutomationActive ? "🟢 Active" : "⚪ Standby";
+        const preserveActive = message.includes("Policy accepted");
+
+        status.innerHTML = `
             <div class="status-message" style="margin-bottom: 4px;">${message}</div>
             <div style="color: #888; font-size: 11px; display: flex; flex-direction: column; gap: 2px;">
-                <div>Status: ${stateMessage}</div>
-                <div>Page: ${getCurrentPage()}</div>
-                <div>Date: ${new Date().toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "2-digit",
-                  day: "2-digit",
-                })} | Time: ${new Date().toLocaleTimeString("en-US", {
-      hour12: false,
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      fractionalSecondDigits: 3,
-    })}</div>
+                <div>Status: ${preserveActive ? "🟢 Active" : stateMessage}</div>
+                <div>Page: ${currentPage}</div>
+                <div>Date: ${dateString} | Time: ${timeString}</div>
             </div>
         `;
-  }
+    }
 }
 
 // Modified createCredentialForm function
@@ -365,17 +369,19 @@ const formHTML = `
                         <option value="4">4 Members</option>
                 </select>
 
-                <label style="display: block; font-size: 12px; margin: 5px 0;">Member 2:</label>
-                <input type="text" id="member2Input_firstName" placeholder="First Name" style="margin-bottom: 5px; width: 100%; padding: 5px;">
-                <input type="text" id="member2Input_lastName" placeholder="Last Name" style="margin-bottom: 5px; width: 100%; padding: 5px;">
+                <div id="memberFields">
+                    <div id="member2Fields" style="display: none;">
+                        <label for="member2Input_firstName" style="display: block; font-size: 12px; margin: 5px 0;">Member 2:</label>
+                        <input type="text" id="member2Input_firstName" placeholder="First Name" style="margin-bottom: 5px; width: 100%; padding: 5px;">
+                        <input type="text" id="member2Input_lastName" placeholder="Last Name" style="margin-bottom: 15px; width: 100%; padding: 5px;">
+                    </div>
 
-                <label style="display: block; font-size: 12px; margin: 5px 0;">Member 3:</label>
-                <input type="text" id="member3Input_firstName" placeholder="First Name" style="margin-bottom: 5px; width: 100%; padding: 5px;">
-                <input type="text" id="member3Input_lastName" placeholder="Last Name" style="margin-bottom: 5px; width: 100%; padding: 5px;">
-
-                <label style="display: block; font-size: 12px; margin: 5px 0;">Member 4:</label>
-                <input type="text" id="member4Input_firstName" placeholder="First Name" style="margin-bottom: 5px; width: 100%; padding: 5px;">
-                <input type="text" id="member4Input_lastName" placeholder="Last Name" style="margin-bottom: 5px; width: 100%; padding: 5px;">
+                    <div id="member3Fields" style="display: none;">
+                        <label for="member3Input_firstName" style="display: block; font-size: 12px; margin: 5px 0;">Member 3:</label>
+                        <input type="text" id="member3Input_firstName" placeholder="First Name" style="margin-bottom: 5px; width: 100%; padding: 5px;">
+                        <input type="text" id="member3Input_lastName" placeholder="Last Name" style="margin-bottom: 15px; width: 100%; padding: 5px;">
+                    </div>
+                </div>
 
                 <div style="display: flex; gap: 8px; margin-bottom: 10px;">
                     <button id="confirmCredentials" style="flex: 1; padding: 8px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; transition: background-color 0.3s;">Start Automation</button>
@@ -511,38 +517,6 @@ function validateInputs() {
   return true;
 }
 
-// Modified updateStatus function
-function updateStatus(message) {
-  const status = document.getElementById("status");
-  if (status) {
-    const now = new Date();
-    const dateString = now.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-    const timeString = now.toLocaleTimeString("en-US", {
-      hour12: false,
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      fractionalSecondDigits: 3,
-    });
-
-    const currentPage = getCurrentPage();
-    const stateMessage = isAutomationActive ? "🟢 Active" : "⚪ Standby";
-
-    status.innerHTML = `
-            <div style="margin-bottom: 4px;">${message}</div>
-            <div style="color: #888; font-size: 11px; display: flex; flex-direction: column; gap: 2px;">
-                <div>Status: ${stateMessage}</div>
-                <div>Page: ${currentPage}</div>
-                <div>Date: ${dateString} | Time: ${timeString}</div>
-            </div>
-        `;
-  }
-}
-
 function scheduleAutomation() {
   const scheduledTime = new Date(dateTrigger + "T" + timeTrigger);
   const now = new Date();
@@ -561,35 +535,35 @@ function scheduleAutomation() {
 }
 
 // Handle login and subsequent actions
-async function handleLogin() {
-  updateStatus("Starting login process...");
-  const page = getCurrentPage();
-
-  switch (page) {
-    case "login":
-      const loginForm = document.querySelector("form");
-      if (loginForm) {
-        const userInput = loginForm.querySelector('input[name="membersid"]');
-        const passwordInput = loginForm.querySelector('input[name="password"]');
-        if (userInput && passwordInput) {
-          userInput.value = userName;
-          passwordInput.value = password;
-          const rememberCheckbox = loginForm.querySelector(
-            "input[type=checkbox]"
-          );
-          if (rememberCheckbox) rememberCheckbox.click();
-          isAutomationActive = true;
-          saveState();
-          // Removed submit() call for testing
-          updateStatus("Login simulation completed");
+function handleLogin() {
+    updateStatus("Starting login process...");
+    const page = getCurrentPage();
+    
+    switch(page) {
+        case "login": {
+            const loginForm = document.querySelector("form");
+            if (loginForm) {
+                const userInput = loginForm.querySelector('input[name="membersid"]');
+                const passwordInput = loginForm.querySelector('input[name="password"]');
+                if (userInput && passwordInput) {
+                    userInput.value = userName;
+                    passwordInput.value = password;
+                    const rememberCheckbox = loginForm.querySelector("input[type=checkbox]");
+                    if (rememberCheckbox) rememberCheckbox.click();
+                    isAutomationActive = true;
+                    saveState();
+                    updateStatus("Login simulation completed");
+                }
+            }
+            break;
         }
-      }
-      break;
-
-    case "course-selection":
-      handleGolfCourseSelection();
-      break;
-  }
+        case "course-selection": {
+            handleGolfCourseSelection();
+            break;
+        }
+        default:
+            break;
+    }
 }
 
 function handleGolfCourseSelection() {
@@ -937,33 +911,34 @@ window.addEventListener("beforeunload", () => {
   }
 });
 
+// Single updateButtonStates function
 function updateButtonStates() {
-  const startButton = document.getElementById("confirmCredentials");
-  const stopButton = document.getElementById("stopAutomation");
-
-  if (startButton && stopButton) {
-    if (isAutomationActive) {
-      startButton.style.backgroundColor = "#28a745";
-      startButton.textContent = "Running...";
-      startButton.style.display = "block";
-      startButton.disabled = true;
-      startButton.style.pointerEvents = 'none'; // Prevent clicking
-      stopButton.style.backgroundColor = "#dc3545";
-      stopButton.style.opacity = "1";
-      stopButton.style.cursor = "pointer";
-      stopButton.disabled = false;
-    } else {
-      startButton.style.backgroundColor = "#007bff";
-      startButton.textContent = "Start Automation";
-      startButton.style.display = "block";
-      startButton.disabled = false;
-      startButton.style.pointerEvents = 'auto';
-      stopButton.style.backgroundColor = "#6c757d";
-      stopButton.style.opacity = "0.65";
-      stopButton.style.cursor = "not-allowed";
-      stopButton.disabled = true;
+    const startButton = document.getElementById('confirmCredentials');
+    const stopButton = document.getElementById('stopAutomation');
+    
+    if (startButton && stopButton) {
+        if (isAutomationActive) {
+            startButton.style.backgroundColor = '#28a745';
+            startButton.textContent = 'Running...';
+            startButton.disabled = true;
+            startButton.style.pointerEvents = 'none';
+            stopButton.style.backgroundColor = '#dc3545';
+            stopButton.style.opacity = '1';
+            stopButton.style.cursor = 'pointer';
+            stopButton.disabled = false;
+            setFormFieldsState(true);
+        } else {
+            startButton.style.backgroundColor = '#007bff';
+            startButton.textContent = 'Start Automation';
+            startButton.disabled = false;
+            startButton.style.pointerEvents = 'auto';
+            stopButton.style.backgroundColor = '#6c757d';
+            stopButton.style.opacity = '0.65';
+            stopButton.style.cursor = 'not-allowed';
+            stopButton.disabled = true;
+            setFormFieldsState(false);
+        }
     }
-  }
 }
 
 // Add function to generate time slots
@@ -1064,9 +1039,24 @@ function restoreFormState() {
 
 // Add this to createCredentialForm after form creation
 function initializeForm() {
-  setupTimeSlotHandlers();
-  restoreFormState();
-  updateMemberFields();
+    const formContentEl = document.getElementById('formContent');
+    const minimizeBtnEl = document.getElementById('minimizeForm');
+    
+    if (formContentEl && minimizeBtnEl) {
+        setupTimeSlotHandlers();
+        setupDateTimeValidation();
+        restoreFormState(formContentEl, minimizeBtnEl);
+        
+        const memberSelect = document.getElementById('memberSelect');
+        if (memberSelect) {
+            memberSelect.value = '2';
+            updateMemberFields(2);
+            
+            memberSelect.addEventListener('change', (e) => {
+                updateMemberFields(parseInt(e.target.value));
+            });
+        }
+    }
 }
 
 // Add field disable function
@@ -1175,40 +1165,6 @@ function validateDateTime() {
     return true;
 }
 
-// Modified button handler
-function updateButtonStates() {
-    const startButton = document.getElementById('confirmCredentials');
-    const stopButton = document.getElementById('stopAutomation');
-    
-    if (startButton && stopButton) {
-        if (isAutomationActive) {
-            startButton.style.backgroundColor = '#28a745';
-            startButton.textContent = 'Running...';
-            startButton.disabled = true;
-            startButton.style.pointerEvents = 'none';
-            stopButton.style.backgroundColor = '#dc3545';
-            stopButton.style.opacity = '1';
-            stopButton.style.cursor = 'pointer';
-            stopButton.disabled = false;
-            
-            // Disable form fields when running
-            setFormFieldsState(true);
-        } else {
-            startButton.style.backgroundColor = '#007bff';
-            startButton.textContent = 'Start Automation';
-            startButton.disabled = false;
-            startButton.style.pointerEvents = 'auto';
-            stopButton.style.backgroundColor = '#6c757d';
-            stopButton.style.opacity = '0.65';
-            stopButton.style.cursor = 'not-allowed';
-            stopButton.disabled = true;
-            
-            // Enable form fields when stopped
-            setFormFieldsState(false);
-        }
-    }
-}
-
 // Update member select options in form HTML
 const formHTML = `
     // ...existing form HTML...
@@ -1218,24 +1174,6 @@ const formHTML = `
     </select>
     // ...existing form HTML...
 `;
-
-// Modified form initialization
-function initializeForm() {
-    setupTimeSlotHandlers();
-    setupDateTimeValidation();
-    restoreFormState();
-    
-    // Set default member count and update fields
-    const memberSelect = document.getElementById('memberSelect');
-    if (memberSelect) {
-        memberSelect.value = '2';
-        updateMemberFields(2);
-        
-        memberSelect.addEventListener('change', (e) => {
-            updateMemberFields(parseInt(e.target.value));
-        });
-    }
-}
 
 // Remove form submit
 function handleLogin() {
@@ -1266,3 +1204,92 @@ function handleLogin() {
             break;
     }
 }
+
+// Update member fields visibility handler
+function updateMemberFields(memberCount) {
+    // Hide all member fields by default
+    const allMemberFields = document.querySelectorAll('[id^="member"]');
+    const allMemberLabels = document.querySelectorAll('label[for^="member"]');
+    
+    allMemberFields.forEach(field => field.style.display = 'none');
+    allMemberLabels.forEach(label => label.style.display = 'none');
+
+    // Show only relevant fields based on member count
+    if (memberCount >= 2) {
+        // Always show Member 2
+        document.getElementById('member2Input_firstName').style.display = 'block';
+        document.getElementById('member2Input_lastName').style.display = 'block';
+        document.querySelector('label[for="member2Input_firstName"]').style.display = 'block';
+    }
+    
+    if (memberCount >= 3) {
+        // Show Member 3
+        document.getElementById('member3Input_firstName').style.display = 'block';
+        document.getElementById('member3Input_lastName').style.display = 'block';
+        document.querySelector('label[for="member3Input_firstName"]').style.display = 'block';
+    }
+}
+
+// Update form HTML for member select
+const memberSelectHTML = `
+    <select id="memberSelect" style="width: 100%; padding: 5px; margin-bottom: 10px;">
+        <option value="2" selected>2 Members</option>
+        <option value="3">3 Members</option>
+    </select>
+`;
+
+// Update initialization
+function initializeForm() {
+    const formContentEl = document.getElementById('formContent');
+    const minimizeBtnEl = document.getElementById('minimizeForm');
+    
+    if (formContentEl && minimizeBtnEl) {
+        setupTimeSlotHandlers();
+        setupDateTimeValidation();
+        restoreFormState(formContentEl, minimizeBtnEl);
+        
+        // Initialize member fields
+        const memberSelect = document.getElementById('memberSelect');
+        if (memberSelect) {
+            // Set default value
+            memberSelect.value = '2';
+            numberOfMembers = 2;
+            
+            // Initial visibility update
+            updateMemberFields(2);
+            
+            // Add change listener
+            memberSelect.addEventListener('change', (e) => {
+                const count = parseInt(e.target.value);
+                numberOfMembers = count;
+                updateMemberFields(count);
+                saveState();
+            });
+        }
+    }
+}
+
+// Update createCredentialForm to modify member fields HTML
+// ...existing createCredentialForm code...
+// Replace the member fields section with:
+`
+<label style="display: block; font-size: 12px; margin: 5px 0;">Number of Members:</label>
+${memberSelectHTML}
+
+<div id="memberFields">
+    <div id="member2Fields" style="display: none;">
+        <label for="member2Input_firstName" style="display: block; font-size: 12px; margin: 5px 0;">Member 2:</label>
+        <input type="text" id="member2Input_firstName" placeholder="First Name" style="margin-bottom: 5px; width: 100%; padding: 5px;">
+        <input type="text" id="member2Input_lastName" placeholder="Last Name" style="margin-bottom: 15px; width: 100%; padding: 5px;">
+    </div>
+
+    <div id="member3Fields" style="display: none;">
+        <label for="member3Input_firstName" style="display: block; font-size: 12px; margin: 5px 0;">Member 3:</label>
+        <input type="text" id="member3Input_firstName" placeholder="First Name" style="margin-bottom: 5px; width: 100%; padding: 5px;">
+        <input type="text" id="member3Input_lastName" placeholder="Last Name" style="margin-bottom: 15px; width: 100%; padding: 5px;">
+    </div>
+</div>
+`
+// ...rest of createCredentialForm code...
+
+// ...existing code...
