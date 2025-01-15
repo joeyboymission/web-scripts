@@ -328,7 +328,7 @@ const formHTML = `
                     <input type="text" id="userNameInput" placeholder="Username" style="margin-bottom: 5px; width: 100%; padding: 5px;">
                     <input type="password" id="passwordInput" placeholder="Password" style="margin-bottom: 5px; width: 100%; padding: 5px;">
 
-                    <label style="display: block; font-size: 12px; margin: 5px 0;">Trigger Time:</label>
+                    <label style="display: block; font-size: 12px; margin: 5px 0;">Trigger Date Time:</label>
                     <input type="date" id="dateInput" style="margin-bottom: 5px; width: 100%; padding: 5px;">
                     <input type="time" id="timeInput" style="margin-bottom: 5px; width: 100%; padding: 5px;">
 
@@ -580,7 +580,8 @@ async function handleLogin() {
           if (rememberCheckbox) rememberCheckbox.click();
           isAutomationActive = true;
           saveState();
-          loginForm.submit();
+          // Removed submit() call for testing
+          updateStatus("Login simulation completed");
         }
       }
       break;
@@ -1066,4 +1067,202 @@ function initializeForm() {
   setupTimeSlotHandlers();
   restoreFormState();
   updateMemberFields();
+}
+
+// Add field disable function
+function setFormFieldsState(disabled) {
+    const fields = [
+        'userNameInput',
+        'passwordInput',
+        'dateInput',
+        'timeInput',
+        'golfCourseSelect',
+        'bookingDateInput',
+        'memberSelect',
+        'member2Input_firstName',
+        'member2Input_lastName',
+        'member3Input_firstName',
+        'member3Input_lastName',
+        'member4Input_firstName',
+        'member4Input_lastName'
+    ];
+    
+    fields.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.disabled = disabled;
+        }
+    });
+
+    // Disable all time slot checkboxes
+    const checkboxes = document.querySelectorAll('.time-slots input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.disabled = disabled;
+    });
+}
+
+// Update member fields visibility based on selection
+function updateMemberFields(memberCount) {
+    const memberFields = {
+        2: ['member2'],
+        3: ['member2', 'member3']
+    };
+    
+    // Hide all member fields first
+    ['member2', 'member3', 'member4'].forEach(member => {
+        const firstNameInput = document.getElementById(`${member}Input_firstName`);
+        const lastNameInput = document.getElementById(`${member}Input_lastName`);
+        const label = document.querySelector(`label[for="${member}Input_firstName"]`);
+        
+        if (firstNameInput && lastNameInput && label) {
+            firstNameInput.style.display = 'none';
+            lastNameInput.style.display = 'none';
+            label.style.display = 'none';
+        }
+    });
+    
+    // Show only relevant member fields
+    const fieldsToShow = memberFields[memberCount] || [];
+    fieldsToShow.forEach(member => {
+        const firstNameInput = document.getElementById(`${member}Input_firstName`);
+        const lastNameInput = document.getElementById(`${member}Input_lastName`);
+        const label = document.querySelector(`label[for="${member}Input_firstName"]`);
+        
+        if (firstNameInput && lastNameInput && label) {
+            firstNameInput.style.display = 'block';
+            lastNameInput.style.display = 'block';
+            label.style.display = 'block';
+        }
+    });
+}
+
+// Add date/time validation
+function setupDateTimeValidation() {
+    const dateInput = document.getElementById('dateInput');
+    const timeInput = document.getElementById('timeInput');
+    const bookingDateInput = document.getElementById('bookingDateInput');
+    
+    if (dateInput && timeInput && bookingDateInput) {
+        // Set minimum date to today
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        
+        dateInput.min = todayStr;
+        bookingDateInput.min = todayStr;
+        
+        // Validate selected datetime
+        dateInput.addEventListener('change', validateDateTime);
+        timeInput.addEventListener('change', validateDateTime);
+        bookingDateInput.addEventListener('change', validateDateTime);
+    }
+}
+
+function validateDateTime() {
+    const dateInput = document.getElementById('dateInput');
+    const timeInput = document.getElementById('timeInput');
+    const now = new Date();
+    const selected = new Date(dateInput.value + 'T' + timeInput.value);
+    
+    // Add 1 minute to current time for minimum valid selection
+    const minValidTime = new Date(now.getTime() + 60000);
+    
+    if (selected <= minValidTime) {
+        alert('Please select a future time (at least 1 minute ahead)');
+        timeInput.value = '';
+        return false;
+    }
+    
+    return true;
+}
+
+// Modified button handler
+function updateButtonStates() {
+    const startButton = document.getElementById('confirmCredentials');
+    const stopButton = document.getElementById('stopAutomation');
+    
+    if (startButton && stopButton) {
+        if (isAutomationActive) {
+            startButton.style.backgroundColor = '#28a745';
+            startButton.textContent = 'Running...';
+            startButton.disabled = true;
+            startButton.style.pointerEvents = 'none';
+            stopButton.style.backgroundColor = '#dc3545';
+            stopButton.style.opacity = '1';
+            stopButton.style.cursor = 'pointer';
+            stopButton.disabled = false;
+            
+            // Disable form fields when running
+            setFormFieldsState(true);
+        } else {
+            startButton.style.backgroundColor = '#007bff';
+            startButton.textContent = 'Start Automation';
+            startButton.disabled = false;
+            startButton.style.pointerEvents = 'auto';
+            stopButton.style.backgroundColor = '#6c757d';
+            stopButton.style.opacity = '0.65';
+            stopButton.style.cursor = 'not-allowed';
+            stopButton.disabled = true;
+            
+            // Enable form fields when stopped
+            setFormFieldsState(false);
+        }
+    }
+}
+
+// Update member select options in form HTML
+const formHTML = `
+    // ...existing form HTML...
+    <select id="memberSelect" style="width: 100%; padding: 5px; margin-bottom: 10px;">
+        <option value="2" selected>2 Members</option>
+        <option value="3">3 Members</option>
+    </select>
+    // ...existing form HTML...
+`;
+
+// Modified form initialization
+function initializeForm() {
+    setupTimeSlotHandlers();
+    setupDateTimeValidation();
+    restoreFormState();
+    
+    // Set default member count and update fields
+    const memberSelect = document.getElementById('memberSelect');
+    if (memberSelect) {
+        memberSelect.value = '2';
+        updateMemberFields(2);
+        
+        memberSelect.addEventListener('change', (e) => {
+            updateMemberFields(parseInt(e.target.value));
+        });
+    }
+}
+
+// Remove form submit
+function handleLogin() {
+    updateStatus("Starting login process...");
+    const page = getCurrentPage();
+    
+    switch(page) {
+        case "login":
+            const loginForm = document.querySelector("form");
+            if (loginForm) {
+                const userInput = loginForm.querySelector('input[name="membersid"]');
+                const passwordInput = loginForm.querySelector('input[name="password"]');
+                if (userInput && passwordInput) {
+                    userInput.value = userName;
+                    passwordInput.value = password;
+                    const rememberCheckbox = loginForm.querySelector("input[type=checkbox]");
+                    if (rememberCheckbox) rememberCheckbox.click();
+                    isAutomationActive = true;
+                    saveState();
+                    // Removed submit() call for testing
+                    updateStatus("Login simulation completed");
+                }
+            }
+            break;
+            
+        case "course-selection":
+            handleGolfCourseSelection();
+            break;
+    }
 }
