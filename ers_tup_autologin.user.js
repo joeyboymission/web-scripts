@@ -9,15 +9,18 @@
 // @grant        none
 // ==/UserScript==
 
-let userName, password;
-userName = "YOUR_STUDENT_ID";
-password = "YOUR_PASSWORD";
+let username = 'TUPM-21-1608'
+let password = 'MISSION'
+let birthDate = '11/06/2002'
 
-let findForm = document.querySelector('form');
+setTimeout(() => {
+    let findForm = document.querySelector('form')
 
-// as the website has been fully loaded, script will now fill the form and submit, the delay of executing of the script maybe 2 seconds delay
+    if (findForm) {
+        findForm.querySelector('input[name="username"]').value = username
+        findForm.querySelector('input[name="password"]').value = password
+        findForm.querySelector('input[name="bdate"]').value = birthDate
+        findForm.submit()
+    }
+}, 2000)
 
-if (findForm) {
-    findForm.querySelector('input[name="username"]').value = userName;
-    findForm.querySelector('input[name="password"]').value = password;
-}

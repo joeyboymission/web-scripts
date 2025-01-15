@@ -1,2 +1,5 @@
 # ENV File
 .env
+
+# Report File
+report.txt
