@@ -136,6 +136,10 @@ const MAX_DATE_RETRIES = 5; // Maximum number of days to try from current date
 // Add date range constants
 const MAX_DAYS_AHEAD = 5; // Maximum days ahead from current date
 
+// Add delay constants
+const SCAN_DELAY = 3000; // 3 seconds delay between date checks
+const FORM_CHECK_DELAY = 1500; // 1.5 seconds to check for form elements
+
 // Store automation state
 function saveState() {
   const state = {
@@ -1618,5 +1622,158 @@ async function processBooking(timeSlot) {
         console.error("Error during booking process:", error);
         updateStatus("Error processing booking");
     }
+}
+
+// Add function to check for alert messages
+function waitForAlertOrForm() {
+    return new Promise((resolve) => {
+        let checkCount = 0;
+        const maxChecks = 6; // Check for 3 seconds total (500ms * 6)
+        
+        const interval = setInterval(() => {
+            checkCount++;
+            
+            // Check for the time slots form group
+            const formGroup = document.querySelector('.form-group select[name="time"]');
+            if (formGroup) {
+                clearInterval(interval);
+                resolve({ type: 'form', element: formGroup });
+                return;
+            }
+            
+            // If we've checked enough times without finding anything
+            if (checkCount >= maxChecks) {
+                clearInterval(interval);
+                resolve({ type: 'timeout' });
+            }
+        }, 500);
+    });
+}
+
+// Modify tryBooking to handle the scanning process
+async function tryBooking(date) {
+    updateStatus(`Checking date: ${date}...`);
+    
+    const dateInput = document.querySelector('#golfdate2');
+    if (!dateInput) {
+        console.error("Date input not found");
+        return;
+    }
+
+    try {
+        // Update the date input
+        dateInput.value = date;
+        dateInput.setAttribute('value', date);
+        dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+        
+        if (typeof SubmitFormData2 === 'function') {
+            SubmitFormData2();
+        }
+
+        // Wait for either an alert or the form to appear
+        const result = await waitForAlertOrForm();
+        
+        if (result.type === 'form') {
+            // Time slots form appeared - date is available
+            updateStatus(`✅ Found available date: ${date}`);
+            const timeSelect = result.element;
+            
+            // Check if any time slots are actually available (not disabled)
+            const availableSlots = Array.from(timeSelect.options)
+                .filter(opt => !opt.disabled && opt.value && opt.value !== '');
+            
+            if (availableSlots.length > 0) {
+                updateStatus(`Found ${availableSlots.length} available time slots`);
+                handleAvailableTimeSlots(availableSlots);
+                return true;
+            }
+        }
+        
+        // If we get here, either got a timeout or no available slots
+        updateStatus(`No available slots for ${date}, trying next day...`);
+        await delay(SCAN_DELAY);
+        
+        if (dateRetryCount < MAX_DATE_RETRIES) {
+            dateRetryCount++;
+            const nextDay = getNextDay(date);
+            tryBooking(nextDay);
+        } else {
+            updateStatus("❌ Reached maximum date range");
+        }
+        
+    } catch (error) {
+        console.error("Error during date check:", error);
+        updateStatus("Error checking date availability");
+    }
+}
+
+// Modify alert handler to work with the new scanning process
+if (typeof window._originalAlert === 'undefined') {
+    window._originalAlert = window.alert;
+    
+    window.alert = function(message) {
+        console.log("Alert intercepted:", message);
+        
+        if (message === ALERT_MESSAGES.FULLY_BOOKED || message === ALERT_MESSAGES.MAINTENANCE) {
+            const errorType = message === ALERT_MESSAGES.FULLY_BOOKED ? "FULLY_BOOKED" : "MAINTENANCE";
+            updateStatus(`${errorType} detected for current date`);
+            
+            // Don't need to handle the error here - tryBooking will handle the next date
+            return;
+        }
+        
+        window._originalAlert.call(window, message);
+    };
+}
+
+// Add new function to start the booking process
+async function startDateScanning() {
+    dateRetryCount = 0;
+    updateStatus("Starting date scan...");
+    
+    // Calculate maximum allowed date
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + MAX_DAYS_AHEAD);
+    
+    // Check if selected date is within range
+    const selectedDate = new Date(bookingDate);
+    if (selectedDate > maxDate) {
+        updateStatus("❌ Selected date is beyond the 5-day limit");
+        return;
+    }
+    
+    // Start scanning from selected date
+    tryBooking(bookingDate);
+}
+
+// Modify handleGolfCourseSelection to use the new scanning process
+function handleGolfCourseSelection() {
+    updateStatus("Preparing course selection...");
+    
+    if (window.golfSelectionTimeout) {
+        clearTimeout(window.golfSelectionTimeout);
+    }
+
+    window.golfSelectionTimeout = setTimeout(() => {
+        const courseSelect = document.querySelector('select[name="golfcourse"]');
+        
+        if (courseSelect) {
+            try {
+                // Set golf course first
+                const courseValue = selectedCourse || GOLF_COURSES.MIDLANDS_FB;
+                courseSelect.value = courseValue;
+                courseSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                
+                updateStatus(`Selected course: ${GOLF_COURSE_NAMES[courseValue]}`);
+                
+                // Start the date scanning process
+                startDateScanning();
+                
+            } catch (error) {
+                console.error("Error in course selection:", error);
+                updateStatus("Error selecting course");
+            }
+        }
+    }, 1500);
 }
 
