@@ -21,8 +21,86 @@ setTimeout(() => {
     const targetDate = {
       year: 2025,
       month: 0, // January = 0
-      day: 22,
+      day: 21,
     };
+
+    function isDateAvailable(year, month, day) {
+      const dateCell = $(
+        `td[data-handler="selectDay"][data-month="${month}"][data-year="${year}"]`
+      ).filter(function () {
+        return $(this).find("a.ui-state-default").text() === day.toString();
+      });
+
+      return dateCell.length > 0 && 
+             !dateCell.hasClass('ui-datepicker-unselectable') && 
+             !dateCell.hasClass('ui-state-disabled');
+    }
+
+    function findNextAvailableDate() {
+      const calendar = $("#ui-datepicker-div");
+      if (!calendar.length) return null;
+
+      // Start from target date and look forward
+      let currentDate = new Date(targetDate.year, targetDate.month, targetDate.day);
+      const maxDays = 30; // Limit search to 30 days ahead
+      let daysChecked = 0;
+
+      while (daysChecked < maxDays) {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const day = currentDate.getDate();
+
+        if (isDateAvailable(year, month, day)) {
+          return { year, month, day };
+        }
+
+        currentDate.setDate(currentDate.getDate() + 1);
+        daysChecked++;
+      }
+      return null;
+    }
+
+    function selectDateInCalendar() {
+      try {
+        // First try to select the target date
+        if (isDateAvailable(targetDate.year, targetDate.month, targetDate.day)) {
+          console.log(`Target date ${targetDate.year}-${targetDate.month + 1}-${targetDate.day} is available, selecting it`);
+          return clickDate(targetDate.year, targetDate.month, targetDate.day);
+        }
+
+        // If target date is not available, find next available date
+        console.log(`Target date is not available, looking for next available date`);
+        const nextDate = findNextAvailableDate();
+        if (!nextDate) {
+          console.error("No available dates found within the next 30 days");
+          return false;
+        }
+
+        console.log(`Attempting to select next available date: ${nextDate.year}-${nextDate.month + 1}-${nextDate.day}`);
+        return clickDate(nextDate.year, nextDate.month, nextDate.day);
+      } catch (error) {
+        console.error("Error selecting date:", error);
+        return false;
+      }
+    }
+
+    function clickDate(year, month, day) {
+      const dateCell = $(
+        `td[data-handler="selectDay"][data-month="${month}"][data-year="${year}"]`
+      ).filter(function () {
+        return $(this).find("a.ui-state-default").text() === day.toString();
+      });
+
+      if (dateCell.length) {
+        const dateLink = dateCell.find("a.ui-state-default");
+        if (dateLink.length) {
+          dateLink[0].click();
+          console.log(`Successfully clicked date: ${year}-${month + 1}-${day}`);
+          return true;
+        }
+      }
+      return false;
+    }
 
     function openDatepicker() {
       try {
@@ -37,37 +115,6 @@ setTimeout(() => {
         return false;
       } catch (error) {
         console.error('Error opening datepicker:', error);
-        return false;
-      }
-    }
-
-    function selectDateInCalendar() {
-      try {
-        const dateCell = $(
-          `td[data-handler="selectDay"][data-month="${targetDate.month}"][data-year="${targetDate.year}"]`
-        ).filter(function () {
-          return (
-            $(this).find("a.ui-state-default").text() ===
-            targetDate.day.toString()
-          );
-        });
-
-        if (dateCell.length) {
-          const dateLink = dateCell.find("a.ui-state-default");
-          if (dateLink.length) {
-            dateLink[0].click();
-            console.log(
-              `Successfully clicked date: ${targetDate.year}-${
-                targetDate.month + 1
-              }-${targetDate.day}`
-            );
-            return true;
-          }
-        }
-        console.error("Target date cell not found or not clickable");
-        return false;
-      } catch (error) {
-        console.error("Error selecting date:", error);
         return false;
       }
     }
@@ -88,14 +135,18 @@ setTimeout(() => {
     function checkIfDateSelected() {
       const dateInput = $('#golfdate4');
       if (dateInput.length && dateInput.val()) {
-        const selectedDate = new Date(dateInput.val());
-        return (
-          selectedDate.getFullYear() === targetDate.year &&
-          selectedDate.getMonth() === targetDate.month &&
-          selectedDate.getDate() === targetDate.day
-        );
+        // Don't check against target date since we might have selected a different available date
+        return dateInput.val() !== '';
       }
       return false;
+    }
+
+    function removeDatepickerFocus() {
+      const dateInput = $('input[name="golfdate4"]');
+      if (dateInput.length) {
+        dateInput.blur();
+        console.log('Removed focus from datepicker');
+      }
     }
 
     // Main execution logic
@@ -109,12 +160,14 @@ setTimeout(() => {
       // Check if date is already selected correctly
       if (checkIfDateSelected()) {
         console.log('Target date successfully selected, stopping script');
+        removeDatepickerFocus();
         clearInterval(interval);
         return;
       }
 
       if (attempts >= maxAttempts) {
         console.error("Failed to select date after maximum attempts");
+        removeDatepickerFocus();
         clearInterval(interval);
         return;
       }
