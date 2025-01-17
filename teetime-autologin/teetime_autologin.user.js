@@ -252,42 +252,12 @@ function startClock() {
   if (clockTimer) clearInterval(clockTimer);
   updateStatus("Ready to start automation");
   clockTimer = setInterval(() => {
-    const status = document.getElementById("status");
-    if (status) {
-      const now = new Date();
-      const dateString = now.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      });
-      const timeString = now.toLocaleTimeString("en-US", {
-        hour12: false,
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        fractionalSecondDigits: 3,
-      });
-
-      const currentPage = getCurrentPage();
-      const stateMessage = isAutomationActive ? "🟢 Active" : "⚪ Standby";
-
-      const lastMessage =
-        status.querySelector(".status-message")?.textContent || "Ready";
-
-      status.innerHTML = `
-                <div class="status-message" style="margin-bottom: 4px;">${lastMessage}</div>
-                <div style="color: #888; font-size: 11px; display: flex; flex-direction: column; gap: 2px;">
-                    <div>Status: ${stateMessage}</div>
-                    <div>Page: ${currentPage}</div>
-                    <div>Date: ${dateString} | Time: ${timeString}</div>
-                </div>
-            `;
-    }
+    updateStatus(); // Call updateStatus without message to update time
   }, 100); // Update every 100ms for smooth time display
 }
 
 // Modified updateStatus function
-function updateStatus(message) {
+function updateStatus(message = "") {
   const status = document.getElementById("status");
   if (status) {
     const now = new Date();
@@ -301,19 +271,21 @@ function updateStatus(message) {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
-      fractionalSecondDigits: 3,
     });
 
     const currentPage = getCurrentPage();
     const stateMessage = isAutomationActive ? "🟢 Active" : "⚪ Standby";
     const debugIndicator = isDebugMode ? "🔧 Debug Mode" : "";
 
+    const lastMessage = message || status.querySelector(".status-message")?.textContent || "Ready";
+
     status.innerHTML = `
-            <div style="margin-bottom: 4px;">${message}</div>
+            <div class="status-message" style="margin-bottom: 4px;">${lastMessage}</div>
             <div style="color: #888; font-size: 11px; display: flex; flex-direction: column; gap: 2px;">
-                <div>Status: ${stateMessage} ${debugIndicator}</div>
+                <div>Status: ${stateMessage}</div>
                 <div>Page: ${currentPage}</div>
                 <div>Date: ${dateString} | Time: ${timeString}</div>
+                <div>Mode: ${debugIndicator}</div>
             </div>
         `;
   }
@@ -508,7 +480,6 @@ function validateInputs() {
           alert('Please select at least one time slot');
           return false;
       }
-      // Removed all member validation
   }
   
   return true;
@@ -682,92 +653,102 @@ function startPolicyModalWatch() {
   modalCheckInterval = setInterval(checkForModal, 1000); // Increased interval
 }
 
+// Updated handlePolicyModal function
 function handlePolicyModal() {
-  updateStatus("Looking for policy modal...");
+    updateStatus("Handling policy modal...");
 
-  try {
-    const modal = document.getElementById("policy2");
-    if (!modal) {
-      updateStatus("Modal not found");
-      return;
-    }
+    try {
+        // Get both possible modal elements
+        const modal = document.getElementById("policy2");
+        const modalBackdrop = document.querySelector('.modal-backdrop');
+        
+        if (!modal) {
+            updateStatus("Modal not found");
+            return;
+        }
 
-    // Try multiple selector strategies for the button
-    let agreeButton = null;
+        // Find the agree button using multiple strategies
+        let agreeButton = modal.querySelector('button.btn.btn-secondary[data-bs-dismiss="modal"]') ||
+                         modal.querySelector('button.btn.btn-secondary:not(.btn-close)') ||
+                         Array.from(modal.querySelectorAll('button')).find(btn => 
+                             btn.textContent.includes("I AGREE") || 
+                             btn.textContent.includes("TERMS AND POLICIES")
+                         );
 
-    // Strategy 1: Find button by exact selector
-    agreeButton = modal.querySelector(
-      'button.btn.btn-secondary[data-bs-dismiss="modal"]'
-    );
-
-    // Strategy 2: Find by text content
-    if (!agreeButton) {
-      const buttons = modal.querySelectorAll("button.btn.btn-secondary");
-      agreeButton = Array.from(buttons).find((btn) =>
-        btn.textContent.includes("I AGREE TO CLUB'S TERMS AND POLICIES")
-      );
-    }
-
-    if (agreeButton) {
-      updateStatus("Found policy button, attempting to close modal...");
-
-      // Ensure Bootstrap is available
-      if (typeof bootstrap !== "undefined") {
-        const bsModal = bootstrap.Modal.getInstance(modal);
-        if (bsModal) {
-          bsModal.hide();
-          updateStatus("Policy accepted (bootstrap hide)");
+        if (agreeButton) {
+            updateStatus("Found policy button, closing modal...");
+            
+            // Force click the button
+            agreeButton.click();
+            
+            // Force cleanup after slight delay
+            setTimeout(() => {
+                // Remove modal
+                modal.style.display = 'none';
+                modal.classList.remove('show');
+                modal.setAttribute('aria-hidden', 'true');
+                
+                // Remove backdrop if exists
+                if (modalBackdrop) {
+                    modalBackdrop.remove();
+                }
+                
+                // Clean up body
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+                
+                // Additional backup cleanup
+                const allBackdrops = document.querySelectorAll('.modal-backdrop');
+                allBackdrops.forEach(backdrop => backdrop.remove());
+                
+                // If Bootstrap modal instance exists, try to hide it
+                if (typeof bootstrap !== 'undefined') {
+                    const bsModal = bootstrap.Modal.getInstance(modal);
+                    if (bsModal) {
+                        bsModal.hide();
+                    }
+                }
+                
+                updateStatus("Policy modal closed successfully");
+                
+                // Continue with golf course selection after modal is closed
+                setTimeout(handleGolfCourseSelection, 1000);
+            }, 500);
         } else {
-          // Fallback to manual modal hiding
-          agreeButton.click();
-          modal.style.display = "none";
-          modal.classList.remove("show");
-          document.body.classList.remove("modal-open");
-          const backdrop = document.querySelector(".modal-backdrop");
-          if (backdrop) {
-            backdrop.remove();
-          }
-          updateStatus("Policy accepted (manual hide)");
+            updateStatus("Could not find policy agreement button");
         }
-      } else {
-        // Direct DOM manipulation if Bootstrap is not available
-        agreeButton.click();
-        modal.style.display = "none";
-        modal.classList.remove("show");
-        document.body.classList.remove("modal-open");
-        const backdrop = document.querySelector(".modal-backdrop");
-        if (backdrop) {
-          backdrop.remove();
-        }
-        document.body.style.overflow = "";
-        document.body.style.paddingRight = "";
-        updateStatus("Policy accepted (direct manipulation)");
-      }
-
-      // Final cleanup after slight delay
-      setTimeout(() => {
-        if (modal.style.display === "block") {
-          // Force cleanup if modal is still visible
-          modal.remove();
-          const backdrop = document.querySelector(".modal-backdrop");
-          if (backdrop) backdrop.remove();
-          document.body.classList.remove("modal-open");
-          document.body.style.overflow = "";
-          document.body.style.paddingRight = "";
-          updateStatus("Policy accepted (forced cleanup)");
-        }
-      }, 1000);
-
-      return;
+    } catch (error) {
+        console.error("Error handling policy modal:", error);
+        updateStatus("Error handling policy modal");
     }
+}
 
-    updateStatus(
-      "Could not find policy agreement button - please check manually"
-    );
-  } catch (error) {
-    console.error("Error handling policy modal:", error);
-    updateStatus("Error accepting policy");
-  }
+// Update startPolicyModalWatch for better reliability
+function startPolicyModalWatch() {
+    let attempts = 0;
+    const maxAttempts = 20;
+    const checkInterval = 500; // Check every 500ms
+    let modalCheckInterval;
+
+    const checkForModal = () => {
+        attempts++;
+        
+        // Look for modal using multiple selectors
+        const modalExists = document.getElementById("policy2") || 
+                          document.querySelector(".modal-dialog-centered") ||
+                          document.querySelector(".modal.show");
+
+        if (modalExists) {
+            clearInterval(modalCheckInterval);
+            handlePolicyModal();
+        } else if (attempts >= maxAttempts) {
+            clearInterval(modalCheckInterval);
+            updateStatus("No policy modal found after " + maxAttempts + " attempts");
+        }
+    };
+
+    modalCheckInterval = setInterval(checkForModal, checkInterval);
 }
 
 // Add URL tracking
@@ -1377,21 +1358,46 @@ function handleBookingError(errorType) {
 
 // Add function to check if time slots are available
 function checkTimeSlots() {
-    const timeSelect = document.querySelector('#eightminutes');
-    if (!timeSelect) return false;
-
-    // Check if there are any enabled options (excluding the default "Select Time" option)
-    const enabledOptions = Array.from(timeSelect.options).filter(opt => 
-        !opt.disabled && opt.value && opt.value !== ''
-    );
-
-    if (enabledOptions.length > 0) {
-        updateStatus(`✅ Found ${enabledOptions.length} available time slots`);
-        handleAvailableTimeSlots(enabledOptions);
-        return true;
-    }
-
+  const timeSelect = document.querySelector('select[name="time"]');
+  if (!timeSelect) {
+    if (isDebugMode) console.log("Time select element not found");
     return false;
+  }
+
+  const availableOptions = Array.from(timeSelect.options).filter(opt => 
+    !opt.hasAttribute('disable') && 
+    !opt.hasAttribute('disabled') &&
+    !opt.disabled &&
+    opt.value && 
+    opt.value !== ''
+  );
+
+  if (isDebugMode) {
+    console.log("Available time slots:", availableOptions.map(opt => opt.value));
+  }
+
+  if (availableOptions.length > 0) {
+    updateStatus(`✅ Found ${availableOptions.length} available time slots`);
+    
+    // Find first available slot that matches user's selected time range
+    const firstMatch = availableOptions.find(opt => {
+      const slotTime = opt.value;
+      return selectedTimes.some(selectedTime => slotTime >= selectedTime);
+    });
+
+    if (firstMatch) {
+      updateStatus(`Found matching slot: ${firstMatch.value}`);
+      if (!isDebugMode) {
+        // Book the slot by setting the select value
+        timeSelect.value = firstMatch.value;
+        timeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      return true;
+    }
+  }
+
+  updateStatus("No available time slots found");
+  return false;
 }
 
 // Add function to handle available time slots
@@ -1438,7 +1444,7 @@ if (foundSlots.length > 0) {
                     const lastNameInput = document.querySelector(`input[name="member${memberNum}_lastname"]`);
                     
                     if (firstNameInput) firstNameInput.value = member.firstName;
-                    if (lastNameInput) lastNameInput.value = member.lastName;
+                    if (lastNameInput) firstNameInput.value = member.lastName;
                 }
             });
 
@@ -1548,32 +1554,50 @@ async function tryBooking(date) {
 
 // Modify handleBookingError for better flow
 async function handleBookingError(errorType) {
-    console.log(`Booking error: ${errorType}`);
+  console.log(`Booking error: ${errorType}`);
+  
+  if (errorType === "FULLY_BOOKED" || errorType === "MAINTENANCE") {
+    const remainingRetries = calculateRemainingRetries(bookingDate);
     
-    if (errorType === "FULLY_BOOKED" || errorType === "MAINTENANCE") {
-        const remainingRetries = calculateRemainingRetries(bookingDate);
-        
-        if (remainingRetries > 0) {
-            const nextDay = getNextDay(bookingDate);
-            updateStatus(`${errorType}: Will try next day (${nextDay}) in 3 seconds...`);
-            bookingDate = nextDay;
-            
-            // Wait before trying next date
-            await delay(3000);
-            
-            // Try booking with new date
-            tryBooking(nextDay);
-        } else {
-            updateStatus("❌ Reached maximum date range (5 days from current date)");
-            if (isDebugMode) {
-                console.log("Date range exhausted");
-            }
-        }
-        return;
+    if (remainingRetries > 0) {
+      const nextDay = getNextDay(bookingDate);
+      updateStatus(`${errorType}: Will try next day (${nextDay}) in 3 seconds...`);
+      bookingDate = nextDay;
+      
+      // Wait before trying next date
+      await delay(3000);
+      
+      // Try booking with new date
+      tryBooking(nextDay);
+    } else {
+      updateStatus("❌ Reached maximum date range (5 days from current date)");
+      if (isDebugMode) {
+        console.log("Date range exhausted");
+      }
     }
+    return;
+  }
 
-    // Handle other errors
-    // ...rest of existing error handling code...
+  // Handle other errors
+  const dateInput = document.querySelector('#golfdate2');
+  if (dateInput) {
+    dateInput.value = '';
+    dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  // Reset form if possible
+  if (typeof SubmitFormData2 === 'function') {
+    try {
+      SubmitFormData2();
+      updateStatus(`Error handled: ${errorType}`);
+    } catch (error) {
+      console.error("Error resetting form:", error);
+      updateStatus("Failed to reset form after error");
+    }
+  }
+
+  // Save current state
+  saveState();
 }
 
 // Modify handleAvailableTimeSlots to process found slots
@@ -1603,7 +1627,7 @@ function handleAvailableTimeSlots(availableOptions) {
 
 // Add new function to process actual booking
 async function processBooking(timeSlot) {
-    const timeSelect = document.querySelector('#eightminutes');
+    const timeSelect = document.querySelector('select[name="time"]');
     if (!timeSelect) return;
 
     try {
@@ -1720,9 +1744,7 @@ if (typeof window._originalAlert === 'undefined') {
         
         if (message === ALERT_MESSAGES.FULLY_BOOKED || message === ALERT_MESSAGES.MAINTENANCE) {
             const errorType = message === ALERT_MESSAGES.FULLY_BOOKED ? "FULLY_BOOKED" : "MAINTENANCE";
-            updateStatus(`${errorType} detected for current date`);
-            
-            // Don't need to handle the error here - tryBooking will handle the next date
+            updateStatus(`${errorType} detected for current date`);            
             return;
         }
         
@@ -1779,5 +1801,110 @@ function handleGolfCourseSelection() {
             }
         }
     }, 1500);
+}
+
+// Modify the handleAvailableTimeSlots function
+function handleAvailableTimeSlots(timeSelect) {
+    if (!timeSelect) return false;
+    
+    // Get all options and filter for available ones (not disabled)
+    const options = Array.from(timeSelect.options);
+    const availableSlots = options.filter(opt => 
+        !opt.disabled && 
+        opt.value && 
+        !opt.hasAttribute('disabled')
+    );
+
+    if (isDebugMode) {
+        console.log("All available slots:", availableSlots.map(opt => opt.value));
+    }
+
+    // Get user's selected time range
+    const selectedTimeRange = selectedTimes.sort();
+    if (selectedTimeRange.length === 0) {
+        updateStatus("No time range selected");
+        return false;
+    }
+
+    const rangeStart = selectedTimeRange[0];
+    const rangeEnd = selectedTimeRange[selectedTimeRange.length - 1];
+
+    // Find first available slot within user's selected range
+    const matchingSlot = availableSlots.find(opt => {
+        const slotTime = opt.value;
+        return slotTime >= rangeStart && slotTime <= rangeEnd;
+    });
+
+    if (matchingSlot) {
+        updateStatus(`Found available slot: ${matchingSlot.value}`);
+        if (!isDebugMode) {
+            // Select the time slot
+            timeSelect.value = matchingSlot.value;
+            timeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+        } else {
+            console.log(`Debug mode: Would select time slot ${matchingSlot.value}`);
+            return true;
+        }
+    } else {
+        updateStatus(`No available slots between ${rangeStart} and ${rangeEnd}`);
+        return false;
+    }
+}
+
+// Modify the checkTimeSlots function
+async function checkTimeSlots() {
+    const timeSelect = document.querySelector('select[name="time"]');
+    if (!timeSelect) {
+        updateStatus("Time selection not found");
+        return false;
+    }
+
+    // Add small delay to ensure options are loaded
+    await delay(1000);
+
+    return handleAvailableTimeSlots(timeSelect);
+}
+
+// Modify tryBooking to use the new time slot checking
+async function tryBooking(date) {
+    const dateInput = document.querySelector('#golfdate2');
+    if (!dateInput) return false;
+
+    try {
+        dateInput.value = date;
+        dateInput.setAttribute('value', date);
+        dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+        
+        if (typeof SubmitFormData2 === 'function') {
+            SubmitFormData2();
+        }
+
+        // Wait for time slots to load
+        await delay(2000);
+        
+        const success = await checkTimeSlots();
+        if (success) {
+            // Stop trying more dates since we found an available slot
+            dateRetryCount = MAX_DATE_RETRIES;
+            return true;
+        }
+
+        // If no success, try next date
+        if (dateRetryCount < MAX_DATE_RETRIES) {
+            dateRetryCount++;
+            const nextDay = getNextDay(date);
+            await delay(1000); // Add delay between attempts
+            return tryBooking(nextDay);
+        } else {
+            updateStatus("❌ No available slots found within date range");
+            return false;
+        }
+
+    } catch (error) {
+        console.error("Error during booking retry:", error);
+        updateStatus("Error checking availability");
+        return false;
+    }
 }
 
