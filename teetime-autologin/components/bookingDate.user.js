@@ -26,11 +26,8 @@ setTimeout(() => {
 
     function openDatepicker() {
       try {
-        // Find the date input
         const dateInput = $('input[name="golfdate4"]');
-        
         if (dateInput.length) {
-          // Focus and click the input to open the datepicker
           dateInput.focus();
           dateInput[0].click();
           console.log('Opened datepicker');
@@ -46,7 +43,6 @@ setTimeout(() => {
 
     function selectDateInCalendar() {
       try {
-        // Find the specific date cell using data attributes
         const dateCell = $(
           `td[data-handler="selectDay"][data-month="${targetDate.month}"][data-year="${targetDate.year}"]`
         ).filter(function () {
@@ -57,7 +53,6 @@ setTimeout(() => {
         });
 
         if (dateCell.length) {
-          // Click the date cell
           const dateLink = dateCell.find("a.ui-state-default");
           if (dateLink.length) {
             dateLink[0].click();
@@ -78,40 +73,49 @@ setTimeout(() => {
     }
 
     function debugDatepicker() {
-      // Log datepicker state
-      console.log('Datepicker visible:', $('#ui-datepicker-div').is(':visible'));
-      
-      // Log available selectable dates
-      $('td[data-handler="selectDay"]').each(function() {
-          console.log('Selectable date:', {
-              day: $(this).find('a').text(),
-              month: $(this).attr('data-month'),
-              year: $(this).attr('data-year'),
-              classes: $(this).attr('class'),
-              clickable: $(this).find('a').length > 0
-          });
-      });
-  
-      // Log input field state
-      const dateInput = $('#golfdate4');
-      console.log('Date input:', {
-          exists: dateInput.length > 0,
-          value: dateInput.val(),
-          readonly: dateInput.prop('readonly'),
-          hasDatepicker: dateInput.hasClass('hasDatepicker')
-      });
+      const datepickerState = {
+        isVisible: $('#ui-datepicker-div').is(':visible'),
+        dateInput: {
+          exists: $('#golfdate4').length > 0,
+          value: $('#golfdate4').val(),
+          readonly: $('#golfdate4').prop('readonly'),
+          hasDatepicker: $('#golfdate4').hasClass('hasDatepicker')
+        }
+      };
+      console.log('Datepicker state:', datepickerState);
     }
 
-    // Wait for page load and try to select the date
+    function checkIfDateSelected() {
+      const dateInput = $('#golfdate4');
+      if (dateInput.length && dateInput.val()) {
+        const selectedDate = new Date(dateInput.val());
+        return (
+          selectedDate.getFullYear() === targetDate.year &&
+          selectedDate.getMonth() === targetDate.month &&
+          selectedDate.getDate() === targetDate.day
+        );
+      }
+      return false;
+    }
+
+    // Main execution logic
     const maxAttempts = 10;
     let attempts = 0;
     let datepickerOpened = false;
 
     const interval = setInterval(() => {
       debugDatepicker();
-      if (attempts >= maxAttempts) {
+
+      // Check if date is already selected correctly
+      if (checkIfDateSelected()) {
+        console.log('Target date successfully selected, stopping script');
         clearInterval(interval);
+        return;
+      }
+
+      if (attempts >= maxAttempts) {
         console.error("Failed to select date after maximum attempts");
+        clearInterval(interval);
         return;
       }
 
@@ -122,11 +126,17 @@ setTimeout(() => {
         return;
       }
 
-      // Check if calendar is visible and date cells are loaded
+      // Check if calendar is visible and try to select date
       const calendar = $("#ui-datepicker-div");
       if (calendar.length && calendar.is(":visible")) {
         if (selectDateInCalendar()) {
-          clearInterval(interval);
+          // Wait a short moment to verify the selection was successful
+          setTimeout(() => {
+            if (checkIfDateSelected()) {
+              console.log('Date selection confirmed successful');
+              clearInterval(interval);
+            }
+          }, 500);
         }
       }
 
