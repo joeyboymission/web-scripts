@@ -17,39 +17,41 @@ setTimeout(() => {
     (function() {
         'use strict';
 
-        // Default time configuration
-        const targetTime = '15:00';
+        // Default time configuration - ordered chronologically
+        const targetTime = ['13:50', '14:00', '14:10', '14:20'];
 
         function isTimeAvailable(timeValue) {
             const timeOption = $('select[name="time"] option').filter(function() {
                 return $(this).val() === timeValue;
             });
 
-            return timeOption.length > 0 && 
-                   !timeOption.prop('disabled') && 
-                   !timeOption.attr('disabled');
+            const available = timeOption.length > 0 && 
+                            !timeOption.prop('disabled') && 
+                            !timeOption.attr('disabled');
+
+            console.log(`Checking time ${timeValue}: ${available ? 'Available' : 'Not available'}`);
+            return available;
         }
 
         function findNextAvailableTime() {
             const timeSelect = $('select[name="time"]');
-            if (!timeSelect.length) return null;
+            if (!timeSelect.length) {
+                console.log('Time select element not found');
+                return null;
+            }
 
-            // Get all available times
-            const availableTimes = timeSelect.find('option')
-                .filter(function() {
-                    return !$(this).prop('disabled') && 
-                           !$(this).attr('disabled') && 
-                           $(this).val();
-                })
-                .map(function() {
-                    return $(this).val();
-                })
-                .get();
+            // Check each target time in order
+            for (const time of targetTime) {
+                if (isTimeAvailable(time)) {
+                    console.log(`Found available time slot: ${time}`);
+                    return time;
+                }
+            }
 
-            // Find the next available time after target time
-            return availableTimes.find(time => time >= targetTime) || availableTimes[0];
+            console.log('No available time slots found for any target times');
+            return null;
         }
-
+        
         function selectTimeInDropdown() {
             try {
                 // First try to select the target time

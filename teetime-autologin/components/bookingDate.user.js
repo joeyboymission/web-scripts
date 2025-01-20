@@ -21,7 +21,7 @@ setTimeout(() => {
     const targetDate = {
       year: 2025,
       month: 0, // January = 0
-      day: 21,
+      day: 23,
     };
 
     function isDateAvailable(year, month, day) {
@@ -104,7 +104,7 @@ setTimeout(() => {
 
     function openDatepicker() {
       try {
-        const dateInput = $('input[name="golfdate4"]');
+        const dateInput = $('input[name="golfdate2"]');
         if (dateInput.length) {
           dateInput.focus();
           dateInput[0].click();
@@ -142,7 +142,7 @@ setTimeout(() => {
     }
 
     function removeDatepickerFocus() {
-      const dateInput = $('input[name="golfdate4"]');
+      const dateInput = $('input[name="golfdate2"]');
       if (dateInput.length) {
         dateInput.blur();
         console.log('Removed focus from datepicker');
@@ -150,7 +150,7 @@ setTimeout(() => {
     }
 
     // Main execution logic
-    const maxAttempts = 10;
+    const maxAttempts = 5;
     let attempts = 0;
     let datepickerOpened = false;
 
