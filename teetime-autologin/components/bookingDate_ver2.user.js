@@ -2,8 +2,8 @@
 // @name         Booking Date Selector
 // @namespace    http://tampermonkey.net/
 // @version      Alpha test
-// @description  A simple script to set the booking date on the Tagaytay Highlands Teetime website.
-// @author       JOIBOI
+// @description  A simple script to set the booking date on the Tagaytay Highlands Teetime website. The script will automatically select the target date if it is available, otherwise it will search for the next available date within the next 30 days
+// @author       JOIBOI and Keiane
 // @match        https://tagaytayhighlands-teetime.com/
 // @match        https://tagaytayhighlands-teetime.com/index.php?w=1
 // @match        https://tagaytayhighlands-teetime.com/index.php
@@ -24,6 +24,20 @@ setTimeout(() => {
       day: 21,
     };
 
+    // Array of all possible datepicker IDs
+    const datepickerIds = ['golfdate', 'golfdate2', 'golfdate3', 'golfdate4'];
+
+    function getActiveDatepicker() {
+      // Find which datepicker is currently visible/active
+      for (const id of datepickerIds) {
+        const $datepicker = $(`#${id}`);
+        if ($datepicker.length && $datepicker.closest('.myDiv').is(':visible')) {
+          return $datepicker;
+        }
+      }
+      return null;
+    }
+
     function isDateAvailable(year, month, day) {
       const dateCell = $(
         `td[data-handler="selectDay"][data-month="${month}"][data-year="${year}"]`
@@ -40,9 +54,8 @@ setTimeout(() => {
       const calendar = $("#ui-datepicker-div");
       if (!calendar.length) return null;
 
-      // Start from target date and look forward
       let currentDate = new Date(targetDate.year, targetDate.month, targetDate.day);
-      const maxDays = 30; // Limit search to 30 days ahead
+      const maxDays = 30;
       let daysChecked = 0;
 
       while (daysChecked < maxDays) {
@@ -62,24 +75,22 @@ setTimeout(() => {
 
     function selectDateInCalendar() {
       try {
-        // First try to select the target date
         if (isDateAvailable(targetDate.year, targetDate.month, targetDate.day)) {
-          console.log(`Target date ${targetDate.year}-${targetDate.month + 1}-${targetDate.day} is available, selecting it`);
+          console.log(`Target date ${targetDate.year}-${targetDate.month + 1}-${targetDate.day} is available`);
           return clickDate(targetDate.year, targetDate.month, targetDate.day);
         }
 
-        // If target date is not available, find next available date
-        console.log(`Target date is not available, looking for next available date`);
+        console.log('Target date not available, searching for next available date');
         const nextDate = findNextAvailableDate();
         if (!nextDate) {
           console.error("No available dates found within the next 30 days");
           return false;
         }
 
-        console.log(`Attempting to select next available date: ${nextDate.year}-${nextDate.month + 1}-${nextDate.day}`);
+        console.log(`Found next available date: ${nextDate.year}-${nextDate.month + 1}-${nextDate.day}`);
         return clickDate(nextDate.year, nextDate.month, nextDate.day);
       } catch (error) {
-        console.error("Error selecting date:", error);
+        console.error("Error in selectDateInCalendar:", error);
         return false;
       }
     }
@@ -95,7 +106,7 @@ setTimeout(() => {
         const dateLink = dateCell.find("a.ui-state-default");
         if (dateLink.length) {
           dateLink[0].click();
-          console.log(`Successfully clicked date: ${year}-${month + 1}-${day}`);
+          console.log(`Clicked date: ${year}-${month + 1}-${day}`);
           return true;
         }
       }
@@ -104,14 +115,14 @@ setTimeout(() => {
 
     function openDatepicker() {
       try {
-        const dateInput = $('input[name="golfdate4"]');
-        if (dateInput.length) {
-          dateInput.focus();
-          dateInput[0].click();
-          console.log('Opened datepicker');
+        const activeDatepicker = getActiveDatepicker();
+        if (activeDatepicker) {
+          activeDatepicker.focus();
+          activeDatepicker[0].click();
+          console.log(`Opened datepicker: ${activeDatepicker.attr('id')}`);
           return true;
         }
-        console.error('Date input not found');
+        console.error('No visible datepicker found');
         return false;
       } catch (error) {
         console.error('Error opening datepicker:', error);
@@ -119,33 +130,20 @@ setTimeout(() => {
       }
     }
 
-    function debugDatepicker() {
-      const datepickerState = {
-        isVisible: $('#ui-datepicker-div').is(':visible'),
-        dateInput: {
-          exists: $('#golfdate4').length > 0,
-          value: $('#golfdate4').val(),
-          readonly: $('#golfdate4').prop('readonly'),
-          hasDatepicker: $('#golfdate4').hasClass('hasDatepicker')
-        }
-      };
-      console.log('Datepicker state:', datepickerState);
-    }
-
     function checkIfDateSelected() {
-      const dateInput = $('#golfdate4');
-      if (dateInput.length && dateInput.val()) {
-        // Don't check against target date since we might have selected a different available date
-        return dateInput.val() !== '';
+      const activeDatepicker = getActiveDatepicker();
+      if (activeDatepicker && activeDatepicker.val()) {
+        console.log(`Date selected in ${activeDatepicker.attr('id')}: ${activeDatepicker.val()}`);
+        return true;
       }
       return false;
     }
 
     function removeDatepickerFocus() {
-      const dateInput = $('input[name="golfdate4"]');
-      if (dateInput.length) {
-        dateInput.blur();
-        console.log('Removed focus from datepicker');
+      const activeDatepicker = getActiveDatepicker();
+      if (activeDatepicker) {
+        activeDatepicker.blur();
+        console.log(`Removed focus from ${activeDatepicker.attr('id')}`);
       }
     }
 
@@ -155,38 +153,32 @@ setTimeout(() => {
     let datepickerOpened = false;
 
     const interval = setInterval(() => {
-      debugDatepicker();
-
-      // Check if date is already selected correctly
       if (checkIfDateSelected()) {
-        console.log('Target date successfully selected, stopping script');
+        console.log('Date successfully selected');
         removeDatepickerFocus();
         clearInterval(interval);
         return;
       }
 
       if (attempts >= maxAttempts) {
-        console.error("Failed to select date after maximum attempts");
+        console.error("Maximum attempts reached");
         removeDatepickerFocus();
         clearInterval(interval);
         return;
       }
 
-      // First try to open the datepicker if not already opened
       if (!datepickerOpened) {
         datepickerOpened = openDatepicker();
         attempts++;
         return;
       }
 
-      // Check if calendar is visible and try to select date
       const calendar = $("#ui-datepicker-div");
       if (calendar.length && calendar.is(":visible")) {
         if (selectDateInCalendar()) {
-          // Wait a short moment to verify the selection was successful
           setTimeout(() => {
             if (checkIfDateSelected()) {
-              console.log('Date selection confirmed successful');
+              console.log('Date selection confirmed');
               clearInterval(interval);
             }
           }, 500);

@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      Alpha test
 // @description  A simple script to close the modal that appears on the Tagaytay Highlands Teetime website.
-// @author       JOIBOI
+// @author       JOIBOI and Keiane
 // @match        https://tagaytayhighlands-teetime.com/
 // @match        https://tagaytayhighlands-teetime.com/index.php?w=1
 // @match        https://tagaytayhighlands-teetime.com/index.php

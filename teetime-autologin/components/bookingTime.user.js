@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      Alpha test
 // @description  A simple script to set the booking time on the Tagaytay Highlands Teetime website.
-// @author       JOIBOI
+// @author       JOIBOI and Keiane
 // @match        https://tagaytayhighlands-teetime.com/
 // @match        https://tagaytayhighlands-teetime.com/index.php?w=1
 // @match        https://tagaytayhighlands-teetime.com/index.php
@@ -18,98 +18,124 @@ setTimeout(() => {
         'use strict';
 
         const targetTime = '13:50';
+        console.log('Script initialized with target time:', targetTime);
 
-        function activateDropdown() {
-            const timeSelect = document.querySelector('select#golftime.form-control[name="time"]');
-            if (!timeSelect) {
-                console.error('Dropdown not found');
-                return null;
+        function findTimeDropdown() {
+            console.log('Attempting to find time dropdown...');
+            
+            // Try multiple selectors to ensure we find the dropdown
+            const selectors = [
+                'select#golftime[name="time"]',
+                'select#golftime',
+                'select[name="time"]'
+            ];
+
+            for (const selector of selectors) {
+                const dropdown = document.querySelector(selector);
+                if (dropdown) {
+                    console.log('Found dropdown using selector:', selector);
+                    return dropdown;
+                }
             }
 
-            // Attempt to focus and click the dropdown
-            try {
-                timeSelect.focus();
-                timeSelect.click();
-                console.log('Dropdown activated');
-                return timeSelect;
-            } catch (error) {
-                console.error('Failed to activate dropdown:', error);
-                return null;
-            }
+            console.error('Time dropdown not found with any selector');
+            return null;
         }
 
-        function findAvailableSlots(dropdown) {
+        function getAvailableTimeSlots(dropdown) {
+            console.log('Scanning for available time slots...');
+
             if (!dropdown) return [];
 
-            // Get all options and filter out disabled/invalid ones
-            const slots = Array.from(dropdown.options).filter(option => {
-                const isEnabled = !option.disabled && !option.hasAttribute('disabled');
-                const hasValidTime = option.value && option.value.match(/^\d{2}:\d{2}$/);
-                return isEnabled && hasValidTime;
+            // Convert options to array and filter
+            const options = Array.from(dropdown.options);
+            const availableSlots = options.filter(option => {
+                // Skip the default "Select Time" option
+                if (option.value === '') return false;
+                
+                // Include option if it has a valid time value format (HH:MM)
+                const isValidTime = /^\d{2}:\d{2}$/.test(option.value);
+                return isValidTime;
             });
 
-            console.log(`Found ${slots.length} available time slots`);
-            return slots;
+            console.log(`Found ${availableSlots.length} available time slots`);
+            availableSlots.forEach(slot => console.log(`Available slot: ${slot.value}`));
+            
+            return availableSlots;
         }
 
-        function selectTimeSlot(dropdown, slots) {
-            if (!dropdown || !slots.length) return false;
+        function selectTargetTime(dropdown, availableSlots) {
+            console.log(`Attempting to select target time: ${targetTime}`);
 
-            // Try to find exact target time
-            const exactMatch = slots.find(opt => opt.value === targetTime);
+            if (!dropdown || availableSlots.length === 0) {
+                console.error('Cannot select time: invalid dropdown or no available slots');
+                return false;
+            }
+
+            // Find exact match
+            const exactMatch = availableSlots.find(opt => opt.value === targetTime);
+            
             if (exactMatch) {
-                console.log(`Found exact time match: ${targetTime}`);
+                console.log(`Found exact match for ${targetTime}`);
                 dropdown.value = targetTime;
                 dropdown.dispatchEvent(new Event('change', { bubbles: true }));
+                console.log('Time selection successful');
                 return true;
             }
 
-            // Find next available time if target not found
-            const nextTime = slots
+            // If no exact match, find next available time
+            const nextAvailable = availableSlots
                 .map(opt => opt.value)
                 .sort()
                 .find(time => time > targetTime);
 
-            if (nextTime) {
-                console.log(`Selected next available time: ${nextTime}`);
-                dropdown.value = nextTime;
+            if (nextAvailable) {
+                console.log(`Selected next available time: ${nextAvailable}`);
+                dropdown.value = nextAvailable;
                 dropdown.dispatchEvent(new Event('change', { bubbles: true }));
                 return true;
             }
 
-            console.error('No suitable time slots found');
+            console.error('No suitable time slot found');
             return false;
         }
 
-        function attemptTimeSelection() {
-            const dropdown = activateDropdown();
-            if (!dropdown) return false;
+        function executeTimeSelection() {
+            console.log('Starting time selection process...');
+            
+            const dropdown = findTimeDropdown();
+            if (!dropdown) return;
 
-            const availableSlots = findAvailableSlots(dropdown);
-            return selectTimeSlot(dropdown, availableSlots);
+            const availableSlots = getAvailableTimeSlots(dropdown);
+            if (availableSlots.length === 0) {
+                console.log('Retrying in 2 seconds...');
+                setTimeout(executeTimeSelection, 2000);
+                return;
+            }
+
+            const success = selectTargetTime(dropdown, availableSlots);
+            if (success) {
+                console.log('Time selection completed successfully');
+            } else {
+                console.log('Time selection failed, retrying in 2 seconds...');
+                setTimeout(executeTimeSelection, 2000);
+            }
         }
 
-        // Initial attempt when page loads
-        window.addEventListener('load', () => {
-            // Try immediately and set up retry if needed
-            if (!attemptTimeSelection()) {
-                console.log('Initial attempt failed, retrying in 2 seconds...');
-                setTimeout(attemptTimeSelection, 2000);
-            }
+        // Initial execution
+        console.log('Starting script execution after 8 second delay...');
+        executeTimeSelection();
 
-            // Set up observer for dynamic updates
-            const observer = new MutationObserver((mutations) => {
-                for (const mutation of mutations) {
-                    if (mutation.type === 'childList') {
-                        attemptTimeSelection();
-                    }
-                }
-            });
-
-            const resultsDiv = document.getElementById('results2');
-            if (resultsDiv) {
-                observer.observe(resultsDiv, { childList: true, subtree: true });
-            }
+        // Set up observer for dynamic updates
+        const observer = new MutationObserver((mutations) => {
+            console.log('Detected page changes, rechecking time selection...');
+            executeTimeSelection();
         });
+
+        const resultsDiv = document.getElementById('results2');
+        if (resultsDiv) {
+            observer.observe(resultsDiv, { childList: true, subtree: true });
+            console.log('Observer set up for dynamic updates');
+        }
     })();
 }, 8000);
