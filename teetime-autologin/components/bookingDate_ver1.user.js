@@ -36,48 +36,20 @@ setTimeout(() => {
                !dateCell.hasClass('ui-state-disabled');
       }
   
-      function findNextAvailableDate() {
-        const calendar = $("#ui-datepicker-div");
-        if (!calendar.length) return null;
-  
-        // Start from target date and look forward
-        let currentDate = new Date(targetDate.year, targetDate.month, targetDate.day);
-        const maxDays = 30; // Limit search to 30 days ahead
-        let daysChecked = 0;
-  
-        while (daysChecked < maxDays) {
-          const year = currentDate.getFullYear();
-          const month = currentDate.getMonth();
-          const day = currentDate.getDate();
-  
-          if (isDateAvailable(year, month, day)) {
-            return { year, month, day };
-          }
-  
-          currentDate.setDate(currentDate.getDate() + 1);
-          daysChecked++;
-        }
-        return null;
-      }
-  
       function selectDateInCalendar() {
         try {
-          // First try to select the target date
+          // Try to select the target date only
           if (isDateAvailable(targetDate.year, targetDate.month, targetDate.day)) {
             console.log(`Target date ${targetDate.year}-${targetDate.month + 1}-${targetDate.day} is available, selecting it`);
             return clickDate(targetDate.year, targetDate.month, targetDate.day);
           }
   
-          // If target date is not available, find next available date
-          console.log(`Target date is not available, looking for next available date`);
-          const nextDate = findNextAvailableDate();
-          if (!nextDate) {
-            console.error("No available dates found within the next 30 days");
-            return false;
-          }
-  
-          console.log(`Attempting to select next available date: ${nextDate.year}-${nextDate.month + 1}-${nextDate.day}`);
-          return clickDate(nextDate.year, nextDate.month, nextDate.day);
+          // If target date is not available, log and terminate
+          console.log(`Target date ${targetDate.year}-${targetDate.month + 1}-${targetDate.day} is not available`);
+          console.log('Script terminating as requested date is unavailable');
+          removeDatepickerFocus();
+          clearInterval(interval); // Make sure to clear the interval
+          return false;
         } catch (error) {
           console.error("Error selecting date:", error);
           return false;
@@ -197,4 +169,3 @@ setTimeout(() => {
       }, 1000);
     })();
   }, 3000);
-  

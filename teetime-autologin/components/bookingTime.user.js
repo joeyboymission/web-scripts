@@ -17,7 +17,7 @@ setTimeout(() => {
     (function() {
         'use strict';
 
-        const targetTime = '06:00';
+        const targetTime = '13:50';
 
         function activateDropdown() {
             const timeSelect = document.querySelector('select#golftime.form-control[name="time"]');
@@ -112,4 +112,4 @@ setTimeout(() => {
             }
         });
     })();
-}, 7000);
+}, 8000);
