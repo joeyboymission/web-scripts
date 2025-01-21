@@ -569,8 +569,8 @@ setTimeout(() => {
             }
           }
 
-            let player1f = "John Doe";
-            let player1l = "Doe";
+            let player1f = "";
+            let player1l = "";
             // Member 3 is the user's companionl
             let player2f = "Jane Doe";
             let player2l = "Doe";
@@ -579,24 +579,6 @@ setTimeout(() => {
             let player3l = "Drake";
 
             let availablePlayers = [];
-
-            // Input the user's companion's details to the registration form
-            // Validate first if the parameters are defined or not
-            if (!player1f || !player1l) {
-            console.error("Player 1 not fully defined");
-            alert("Player 1 not fully defined");
-            return;
-            }
-            if (!player2f || !player2l) {
-            console.error("Player 2 not fully defined");
-            alert("Player 2 not fully defined");
-            return;
-            }
-            if (!player3f || !player3l) {
-            console.error("Player 3 not fully defined");
-            alert("Player 3 not fully defined");
-            return;
-            }
 
             function inputPlayerDetails() {
             // Wait for time selection to complete
