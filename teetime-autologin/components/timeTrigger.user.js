@@ -1,62 +1,54 @@
 // ==UserScript==
-// @name         Time Trigger Test
+// @name         Debugging and Testing
 // @namespace    http://tampermonkey.net/
-// @version      Alpha test
-// @description  This is a test script for auto-login and booking on Tagaytay Highlands Teetime website.
+// @version      2025-01-21
+// @description  This is a debugging and testing script only
 // @author       JOIBOI and Keiane
-// @match        https://tagaytayhighlands-teetime.com/
-// @match        https://tagaytayhighlands-teetime.com/index.php?w=1
 // @match        https://tagaytayhighlands-teetime.com/index.php
-// @match        https://tagaytayhighlands-teetime.com/t/index.php?v=1
-// @match        https://tagaytayhighlands-teetime.com/t/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=tagaytayhighlands-teetime.com
+// @grant        none
 // ==/UserScript==
 
-// Configuration for the trigger
-const triggerDateTime = {
-    "value": "2025-01-20T21:32",
-    "label": "Trigger Date and Time"
-};
+(function() {
+    'use strict';
 
-function checkTrigger() {
-    try {
+    // Configuration for the trigger
+    const triggerDateTime = {
+        "value": "2025-01-21T21:05",
+        "label": "Trigger Date and Time"
+    };
+    
+    function checkTrigger() {
+        // Get current date and time
         const now = new Date();
-        const triggerTime = new Date(triggerDateTime.value);
-        
-        // Compare timestamps
-        const currentTimestamp = now.getTime();
-        const triggerTimestamp = triggerTime.getTime();
-        
-        // Log time difference every minute
-        if (currentTimestamp % 60000 < 1000) {
-            const timeLeft = (triggerTimestamp - currentTimestamp) / 1000;
-            console.log(`⏳ Time remaining: ${Math.floor(timeLeft)} seconds`);
+        const triggerDate = new Date(triggerDateTime.value);
+
+        console.log('Current time:', now.toLocaleString());
+        console.log('Trigger time:', triggerDate.toLocaleString());
+
+        // Check if trigger date and time is in the past
+        if (triggerDate <= now) {
+            console.log('❌ Error: Trigger date and time must be set to a future date and time');
+            return false;
         }
 
-        // Check if current time matches or just passed trigger time
-        if (currentTimestamp >= triggerTimestamp && 
-            currentTimestamp <= triggerTimestamp + 1000) { // 1 second window
-            console.log('🎯 Trigger activated!', {
-                scheduledTime: triggerDateTime.value,
-                actualTime: now.toISOString()
-            });
+        console.log('✅ Trigger date and time is set to a future date and time');
+        
+        // Calculate time remaining in milliseconds
+        const timeRemaining = triggerDate - now;
+        console.log(`Time remaining: ${Math.floor(timeRemaining / 1000)} seconds`);
+
+        // Set up the main program execution when the trigger time is reached
+        setTimeout(() => {
+            console.log('🚀 Executing main program...');
             
-            // Your action here
-            console.log('⚡ Executing scheduled action...');
+            // Place your main program code here
+            // ================================
+            // Add your code here
             
-            clearInterval(timeChecker);
-            return true;
-        }
-    } catch (error) {
-        console.error('❌ Error in checkTrigger:', error);
-        clearInterval(timeChecker);
+        }, timeRemaining);
     }
-    return false;
-}
 
-// Start checking every 100ms for more precision
-const timeChecker = setInterval(checkTrigger, 100);
-
-// Initial check and confirmation
-console.log('⏰ Trigger scheduled for:', triggerDateTime.value);
-console.log('✅ Script is running and waiting for trigger time...');
+    // Initial check after 2 seconds
+    setTimeout(checkTrigger, 2000);
+})();
