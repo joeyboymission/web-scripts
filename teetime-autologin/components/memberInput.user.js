@@ -40,17 +40,17 @@ setTimeout(() => {
     // Validate first if the parameters are defined or not
     if (!player1f || !player1l) {
         console.error("Player 1 not fully defined");
-        availablePlayers.push(player1f);
+        alert("Player 1 not fully defined");
         return;
     }
     if (!player2f || !player2l) {
         console.error("Player 2 not fully defined");
-        availablePlayers.push(player2f);
+        alert("Player 2 not fully defined");
         return;
     }
     if (!player3f || !player3l) {
         console.error("Player 3 not fully defined");
-        availablePlayers.push(player3f);
+        alert("Player 3 not fully defined");
         return;
     }
     

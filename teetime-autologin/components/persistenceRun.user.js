@@ -242,7 +242,7 @@ setTimeout(() => {
           function dateSelectionComplete() {
             updateState(State.DATE_SELECTED);
             console.log("[Date Selection] Date selection completed");
-            
+
             // Trigger time selection after date is selected with delay
             console.log("[Time Selection] Waiting 1 second before starting time selection...");
             setTimeout(initiateTimeSelection, 1000); // Reduced delay to 1 second
@@ -297,8 +297,7 @@ setTimeout(() => {
                 )
               ) {
                 console.log(
-                  `Target date ${targetDate.year}-${targetDate.month + 1}-${
-                    targetDate.day
+                  `Target date ${targetDate.year}-${targetDate.month + 1}-${targetDate.day
                   } is available, selecting it`
                 );
                 return clickDate(
@@ -310,8 +309,7 @@ setTimeout(() => {
 
               // If target date is not available, log and terminate
               console.log(
-                `Target date ${targetDate.year}-${targetDate.month + 1}-${
-                  targetDate.day
+                `Target date ${targetDate.year}-${targetDate.month + 1}-${targetDate.day
                 } is not available`
               );
               console.log(
@@ -386,9 +384,9 @@ setTimeout(() => {
           function checkIfDateSelected() {
             const activeDatepicker = getActiveDatepicker();
             if (activeDatepicker && activeDatepicker.val()) {
-                console.log(`Date selected in ${activeDatepicker.attr('id')}: ${activeDatepicker.val()}`);
-                dateSelectionComplete(); // Call dateSelectionComplete when date is selected
-                return true;
+              console.log(`Date selected in ${activeDatepicker.attr('id')}: ${activeDatepicker.val()}`);
+              dateSelectionComplete(); // Call dateSelectionComplete when date is selected
+              return true;
             }
             return false;
           }
@@ -409,10 +407,10 @@ setTimeout(() => {
             debugDatepicker();
 
             if (checkIfDateSelected()) {
-                console.log("[Date Selection] Target date successfully selected");
-                removeDatepickerFocus();
-                clearInterval(interval);
-                return;
+              console.log("[Date Selection] Target date successfully selected");
+              removeDatepickerFocus();
+              clearInterval(interval);
+              return;
             }
 
             if (attempts >= maxAttempts) {
@@ -462,8 +460,7 @@ setTimeout(() => {
               !timeOption.attr("disabled");
 
             console.log(
-              `Checking time ${timeValue}: ${
-                available ? "Available" : "Not available"
+              `Checking time ${timeValue}: ${available ? "Available" : "Not available"
               }`
             );
             return available;
@@ -490,7 +487,7 @@ setTimeout(() => {
 
           function selectTimeInDropdown() {
             try {
-              // First try to select the target time
+              // First try to select the target time directly
               if (isTimeAvailable(targetTime)) {
                 console.log(
                   `Target time ${targetTime} is available, selecting it`
@@ -571,6 +568,75 @@ setTimeout(() => {
               console.log("Removed focus from time select");
             }
           }
+
+            let player1f = "John Doe";
+            let player1l = "Doe";
+            // Member 3 is the user's companionl
+            let player2f = "Jane Doe";
+            let player2l = "Doe";
+            // Member 4 is the user's companion
+            let player3f = "Nathan"
+            let player3l = "Drake";
+
+            let availablePlayers = [];
+
+            // Input the user's companion's details to the registration form
+            // Validate first if the parameters are defined or not
+            if (!player1f || !player1l) {
+            console.error("Player 1 not fully defined");
+            alert("Player 1 not fully defined");
+            return;
+            }
+            if (!player2f || !player2l) {
+            console.error("Player 2 not fully defined");
+            alert("Player 2 not fully defined");
+            return;
+            }
+            if (!player3f || !player3l) {
+            console.error("Player 3 not fully defined");
+            alert("Player 3 not fully defined");
+            return;
+            }
+
+            function inputPlayerDetails() {
+            // Wait for time selection to complete
+            if (!checkIfTimeSelected()) {
+              setTimeout(inputPlayerDetails, 3000);
+              return;
+            }
+
+            console.log("Starting player input process");
+
+            // Function to input player details
+            function inputPlayer(number, firstName, lastName) {
+              const firstNameField = document.querySelector(`input[name="player${number}f"]`);
+              const lastNameField = document.querySelector(`input[name="player${number}l"]`);
+              
+              if (firstNameField && lastNameField) {
+              firstNameField.focus();
+              firstNameField.value = firstName;
+              firstNameField.dispatchEvent(new Event('input'));
+              
+              lastNameField.focus();
+              lastNameField.value = lastName;
+              lastNameField.dispatchEvent(new Event('input'));
+              
+              console.log(`Player ${number} details input complete`);
+              return true;
+              }
+              return false;
+            }
+
+            // Sequence the player inputs
+            setTimeout(() => inputPlayer(1, player1f, player1l), 1000);
+            setTimeout(() => inputPlayer(2, player2f, player2l), 2000);
+            setTimeout(() => inputPlayer(3, player3f, player3l), 3000);
+            }
+
+            // Start the player input process after time selection
+            inputPlayerDetails();
+
+
 
           // Main execution logic
           const maxAttempts = 5;
