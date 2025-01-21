@@ -236,7 +236,7 @@ setTimeout(() => {
           const targetDate = {
             year: 2025,
             month: 0, // January = 0
-            day: 22,
+            day: 23,
           };
 
           function dateSelectionComplete() {
@@ -585,6 +585,9 @@ setTimeout(() => {
               console.log("Time successfully selected, stopping script");
               removeTimeSelectFocus();
               clearInterval(interval);
+
+              // Start the companion details input
+              setTimeout(inputCompanionDetails, 2000);
               return;
             }
 
@@ -616,6 +619,166 @@ setTimeout(() => {
 
             attempts++;
           }, 1000);
+        }
+
+        function inputCompanionDetails() {
+          console.log('[Companion Details] Initializing companion details input process');
+          
+          const companions = {
+            player2: { first: 'Bea', last: 'Tronco' },
+            player3: { first: 'Joaquin', last: 'Tronco' },
+            player4: { first: 'Lloyd', last: 'Tronco' }
+          };
+
+          // Function to scan for form group presence
+          function scanForFormGroup() {
+            console.log('[Form Scanner] Starting form group scan');
+            
+            // Look for specific elements that indicate form presence
+            const formGroupIndicators = {
+              container: document.querySelector('.form-group'),
+              player2Label: document.querySelector('label:contains("Player 2:")'),
+              player2Input: document.querySelector('input[name="player1f"]'),
+              anyPlayerInput: document.querySelector('input[name^="player"]')
+            };
+
+            // Log what we found
+            Object.entries(formGroupIndicators).forEach(([key, element]) => {
+              console.log(`[Form Scanner] ${key}: ${element ? 'Found' : 'Not Found'}`);
+            });
+
+            return formGroupIndicators.container && formGroupIndicators.anyPlayerInput;
+          }
+
+          // Function to wait for form elements to be ready
+          function waitForForm() {
+            console.log('[Form Wait] Starting form wait cycle');
+            
+            return new Promise((resolve) => {
+              let attempts = 0;
+              const maxAttempts = 30;
+              
+              const checkForm = setInterval(() => {
+                attempts++;
+                console.log(`[Form Wait] Attempt ${attempts}/${maxAttempts}`);
+                
+                if (scanForFormGroup()) {
+                  console.log('[Form Wait] Form group found, proceeding with input');
+                  clearInterval(checkForm);
+                  resolve(true);
+                } else if (attempts >= maxAttempts) {
+                  console.log('[Form Wait] Max attempts reached, stopping wait cycle');
+                  clearInterval(checkForm);
+                  resolve(false);
+                }
+              }, 1000);
+            });
+          }
+
+          // Function to input a single player's details
+          function inputPlayerDetails(playerNum, firstName, lastName) {
+            console.log(`[Player Input] Attempting to input details for Player ${playerNum}`);
+            
+            const firstNameField = document.querySelector(`input[name="player${playerNum}f"]`);
+            const lastNameField = document.querySelector(`input[name="player${playerNum}l"]`);
+            
+            if (!firstNameField || !lastNameField) {
+              console.error(`[Player Input] Could not find input fields for Player ${playerNum}`);
+              return false;
+            }
+
+            try {
+              // Clear existing values first
+              firstNameField.value = '';
+              lastNameField.value = '';
+              
+              // Input new values
+              firstNameField.value = firstName;
+              lastNameField.value = lastName;
+              
+              // Trigger events
+              ['input', 'change', 'blur'].forEach(eventType => {
+                firstNameField.dispatchEvent(new Event(eventType, { bubbles: true }));
+                lastNameField.dispatchEvent(new Event(eventType, { bubbles: true }));
+              });
+
+              console.log(`[Player Input] Successfully input details for Player ${playerNum}`);
+              return true;
+            } catch (error) {
+              console.error(`[Player Input] Error inputting details for Player ${playerNum}:`, error);
+              return false;
+            }
+          }
+
+          // Function to verify player details
+          function verifyPlayerDetails(playerNum, firstName, lastName) {
+            const firstNameField = document.querySelector(`input[name="player${playerNum}f"]`);
+            const lastNameField = document.querySelector(`input[name="player${playerNum}l"]`);
+            
+            const firstNameMatch = firstNameField?.value === firstName;
+            const lastNameMatch = lastNameField?.value === lastName;
+            
+            console.log(`[Verify] Player ${playerNum} First Name: ${firstNameMatch ? 'Match' : 'Mismatch'}`);
+            console.log(`[Verify] Player ${playerNum} Last Name: ${lastNameMatch ? 'Match' : 'Mismatch'}`);
+            
+            return firstNameMatch && lastNameMatch;
+          }
+
+          // Main execution function
+          async function executeInputProcess() {
+            console.log('[Execute] Starting main input process');
+            
+            const formReady = await waitForForm();
+            if (!formReady) {
+              console.error('[Execute] Form not found after maximum attempts');
+              return;
+            }
+
+            // Add a small delay after form is found
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Input details for each player
+            const playerInputs = [
+              { num: '1', data: companions.player2 },
+              { num: '2', data: companions.player3 },
+              { num: '3', data: companions.player4 }
+            ];
+
+            let allInputsSuccessful = true;
+            
+            for (const player of playerInputs) {
+              const success = inputPlayerDetails(player.num, player.data.first, player.data.last);
+              if (!success) {
+                allInputsSuccessful = false;
+                break;
+              }
+              // Add small delay between inputs
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            if (allInputsSuccessful) {
+              console.log('[Execute] All player details input successfully');
+              
+              // Verify all inputs
+              const allVerified = playerInputs.every(player => 
+                verifyPlayerDetails(player.num, player.data.first, player.data.last)
+              );
+
+              if (allVerified) {
+                console.log('[Execute] All player details verified successfully');
+                updateState(State.BOOKING_COMPLETED);
+              } else {
+                console.log('[Execute] Verification failed, retrying entire process');
+                setTimeout(executeInputProcess, 1000);
+              }
+            } else {
+              console.log('[Execute] Some inputs failed, retrying entire process');
+              setTimeout(executeInputProcess, 1000);
+            }
+          }
+
+          // Start the process
+          executeInputProcess();
         }
 
         // Start the sequence with course selection
