@@ -101,10 +101,10 @@ setTimeout(function () {
     function createFloatingGUI() {
       const div = document.createElement("div");
       div.innerHTML = `
-          <div id="teetimeGUI" style="position: fixed; top: 50%; right: 20px; transform: translateY(-50%); 
-          background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          <div id="teetimeGUI" style="position: fixed; top: 50%; right: 20px; transform: translateY(-50%);
+          background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
           width: 320px; max-height: 90vh; z-index: 9999; font-family: Arial, sans-serif;
-          display: flex; flex-direction: column; margin-left: 20px; overflow: hidden;">
+          display: flex; flex-direction: column; overflow: hidden;">
 
           <!-- Header Section -->
           <div style="flex: 0 0 auto;">
@@ -117,7 +117,7 @@ setTimeout(function () {
           </div>
 
           <!-- Scrollable Content Section -->
-          <div id="guiContent" style="flex: 1; overflow-y: auto; padding-right: 15px; margin: 0 -10px 15px 0;">
+          <div id="guiContent" style="flex: 1; overflow-y: auto; padding-right: 15px; padding-left: 15px; margin: 0px 0px 15px 0px;">
           <!-- Login Details -->
           <label style="display: block; margin-bottom: 8px; font-weight: 600;">User Credentials</label>
           <div class="input-group" style="margin-bottom: 20px;">
