@@ -98,6 +98,9 @@ setTimeout(function () {
       "15:30": "3:30 PM",
     };
 
+    // Add this global variable to store the next run time
+    let nextScheduledRun = null;
+
     // Create the GUI for the user inputs
     function createFloatingGUI() {
       const div = document.createElement("div");
@@ -138,8 +141,10 @@ setTimeout(function () {
           <select id="courseSelect_input" style="width: 100%; padding: 8px; box-sizing: border-box;">
               <option value="">Select Course</option>
               ${Object.entries(GOLF_COURSE_NAMES)
-            .map(([value, name]) => `<option value="${value}">${name}</option>`)
-            .join("")}
+                .map(
+                  ([value, name]) => `<option value="${value}">${name}</option>`
+                )
+                .join("")}
           </select>
           </div>
 
@@ -154,12 +159,15 @@ setTimeout(function () {
           <label style="display: block; margin-bottom: 5px;">Preferred Time Slots</label>
           <div style="max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 8px; box-sizing: border-box; width: 100%;">
               ${Object.entries(TIME_SLOTS)
-            .map(([value, label]) => `
+                .map(
+                  ([value, label]) => `
               <div style="margin-bottom: 5px;">
               <input type="checkbox" id="time_${value}" value="${value}" style="margin-right: 5px;">
               <label for="time_${value}">${label}</label>
               </div>
-              `).join("")}
+              `
+                )
+                .join("")}
           </div>
           </div>
 
@@ -218,7 +226,6 @@ setTimeout(function () {
           <!-- Status Display -->
           <div id="status" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
               <div style="font-size: 13px; margin-bottom: 5px;">Status: <span id="statusText" style="font-weight: 500;">Ready</span></div>
-              <div style="font-size: 13px;">Next Run: <span id="nextRunTime" style="font-weight: 500;">Not scheduled</span></div>
           </div>
 
           <!-- Credits -->
@@ -234,39 +241,59 @@ setTimeout(function () {
       setupGUIEventListeners();
     }
 
-    // Setup the event listeners for the GUI
-    // Start and Stop buttons
-    function setupGUIEventListeners() {
-        // Start button
-        document.getElementById("startBtn")?.addEventListener("click", () => {
-            console.log("Start button clicked - checking form values:");
-            debugFormValues();
-
-            if (validateInputs()) {
-                triggerStart();
-                updateStatus("Trigger time set activated");
-            } else {
-                console.log("Validation failed - see above logs for details");
-            }
-        });
-
-        // Stop button
-        document.getElementById("stopBtn")?.addEventListener("click", () => {
-            //stopAutomation(); // This will be implemented later
-            updateStatus("Automation stopped");
-            console.log("Automation stopped");
-        });
-
-        // Minimize button
-        document.getElementById("minimizeGUI")?.addEventListener("click", () => {
-            const content = document.getElementById("guiContent");
-            if (content) {
-                content.style.display = content.style.display === "none" ? "block" : "none";
-            }
-        });
+    // Add these helper functions for button management
+    function setButtonState(buttonId, enabled) {
+      const button = document.getElementById(buttonId);
+      if (button) {
+        button.disabled = !enabled;
+        button.style.opacity = enabled ? "1" : "0.5";
+        button.style.cursor = enabled ? "pointer" : "not-allowed";
+      }
     }
 
+    // Setup the event listeners for the GUI
+    function setupGUIEventListeners() {
+      // Initial button states
+      setButtonState("startBtn", true); // Start enabled
+      setButtonState("stopBtn", false); // Stop disabled
 
+      // Start button
+      document.getElementById("startBtn")?.addEventListener("click", () => {
+        console.log("Start button clicked - checking form values:");
+        debugFormValues();
+
+        if (validateInputs()) {
+          // Disable start button, enable stop button
+          setButtonState("startBtn", false);
+          setButtonState("stopBtn", true);
+
+          triggerStart();
+          updateStatus("Trigger time set activated");
+        } else {
+          console.log("Validation failed - see above logs for details");
+        }
+      });
+
+      // Stop button
+      document.getElementById("stopBtn")?.addEventListener("click", () => {
+        // Disable stop button, enable start button
+        setButtonState("stopBtn", false);
+        setButtonState("startBtn", true);
+
+        stopAutomation(); // This will be implemented later
+        updateStatus("Automation stopped");
+        console.log("Automation stopped");
+      });
+
+      // Minimize button
+      document.getElementById("minimizeGUI")?.addEventListener("click", () => {
+        const content = document.getElementById("guiContent");
+        if (content) {
+          content.style.display =
+            content.style.display === "none" ? "block" : "none";
+        }
+      });
+    }
 
     // Page detection function
     function detectPage() {
@@ -326,7 +353,7 @@ setTimeout(function () {
             document.querySelectorAll('input[type="checkbox"]:checked')
           ).map((cb) => cb.value),
           label: "Time Slots",
-        }
+        },
       };
 
       // Debug log all input values
@@ -385,33 +412,73 @@ setTimeout(function () {
 
       // Validate the datetime
       if (isNaN(triggerDateTime.getTime())) {
-          console.log('❌ Error: Invalid trigger date and time');
-          return false;
+        console.log("❌ Error: Invalid trigger date and time");
+        return false;
       }
 
       // Check if trigger time is in the past
-      console.log('Current time:', now.toLocaleString());
-      console.log('Trigger time:', triggerDateTime.toLocaleString());
+      console.log("Current time:", now.toLocaleString());
+      console.log("Trigger time:", triggerDateTime.toLocaleString());
 
       if (triggerDateTime <= now) {
-          console.log('❌ Error: Trigger date and time must be set to a future date and time');
-          return false;
+        console.log(
+          "❌ Error: Trigger date and time must be set to a future date and time"
+        );
+        return false;
       }
 
-      console.log('✅ Trigger date and time is set to a future date and time');
-      
+      console.log("✅ Trigger date and time is set to a future date and time");
+
+      // Store the next run time globally
+      nextScheduledRun = triggerDateTime;
+
       // Calculate time remaining in milliseconds
       const timeRemaining = triggerDateTime - now;
-      console.log(`Time remaining: ${Math.floor(timeRemaining / 1000)} seconds`);
+      console.log(
+        `Time remaining: ${Math.floor(timeRemaining / 1000)} seconds`
+      );
 
-      // Set up the main program execution when the trigger time is reached
-      setTimeout(() => {
-          console.log('🚀 Executing main program...');
-          // Execute the main automation logic
-          startAutomation();
+      // Update the status display
+      updateNextRunDisplay();
+
+      // Store the timer so we can cancel it if needed
+      window.automationTimer = setTimeout(() => {
+        console.log("🚀 Executing main program...");
+        startAutomation();
       }, timeRemaining);
 
       return true;
+    }
+
+    // Update this function to handle both setting and clearing the next run display
+    function updateNextRunDisplay(customMessage = null) {
+      const statusDiv = document.getElementById("status");
+      if (statusDiv) {
+        // Find or create the next run div
+        let nextRunDiv = statusDiv.querySelector(".next-run");
+        if (!nextRunDiv) {
+          nextRunDiv = document.createElement("div");
+          nextRunDiv.className = "next-run";
+          nextRunDiv.style.fontSize = "13px";
+          statusDiv.appendChild(nextRunDiv);
+        }
+
+        // If there's a custom message or no next scheduled run, show that instead
+        if (customMessage || !nextScheduledRun) {
+          nextRunDiv.textContent = customMessage || "No scheduled run";
+        } else {
+          const splitTime = nextScheduledRun.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          const splitDate = nextScheduledRun.toLocaleDateString([], {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          });
+          nextRunDiv.textContent = `Next Run: ${splitTime} ${splitDate}`;
+        }
+      }
     }
 
     // Add this helper function to check form values at any time
@@ -422,9 +489,11 @@ setTimeout(function () {
         triggerTime: document.getElementById("triggerTime_input")?.value,
         course: document.getElementById("courseSelect_input")?.value,
         bookingDate: document.getElementById("bookingDate_input")?.value,
-        timeSlots: JSON.stringify(Array.from(
-          document.querySelectorAll('input[type="checkbox"]:checked')
-        ).map((cb) => cb.value)),
+        timeSlots: JSON.stringify(
+          Array.from(
+            document.querySelectorAll('input[type="checkbox"]:checked')
+          ).map((cb) => cb.value)
+        ),
         member2_firstname: document.getElementById("member2_fn")?.value,
         member2_lastname: document.getElementById("member2_ln")?.value,
         member3_firstname: document.getElementById("member3_fn")?.value,
@@ -435,7 +504,6 @@ setTimeout(function () {
       console.table(inputValues);
       return inputValues;
     }
-
 
     // Script status
     function updateStatus(message) {
@@ -595,7 +663,8 @@ setTimeout(function () {
                 if (memberIdField && passwordField) {
                   memberIdField.value = username;
                   passwordField.value = password;
-                  const rememberMe = loginForm.querySelector("#inlineFormCheck");
+                  const rememberMe =
+                    loginForm.querySelector("#inlineFormCheck");
                   if (rememberMe) rememberMe.checked = true;
 
                   loginForm.submit();
@@ -670,7 +739,9 @@ setTimeout(function () {
               console.log("[Date Selection] Date selection completed");
 
               // Trigger time selection after date is selected with delay
-              console.log("[Time Selection] Waiting 1 second before starting time selection...");
+              console.log(
+                "[Time Selection] Waiting 1 second before starting time selection..."
+              );
               setTimeout(initiateTimeSelection, 1000); // Reduced delay to 1 second
             }
 
@@ -723,7 +794,8 @@ setTimeout(function () {
                   )
                 ) {
                   console.log(
-                    `Target date ${targetDate.year}-${targetDate.month + 1}-${targetDate.day
+                    `Target date ${targetDate.year}-${targetDate.month + 1}-${
+                      targetDate.day
                     } is available, selecting it`
                   );
                   return clickDate(
@@ -735,7 +807,8 @@ setTimeout(function () {
 
                 // If target date is not available, log and terminate
                 console.log(
-                  `Target date ${targetDate.year}-${targetDate.month + 1}-${targetDate.day
+                  `Target date ${targetDate.year}-${targetDate.month + 1}-${
+                    targetDate.day
                   } is not available`
                 );
                 console.log(
@@ -810,7 +883,11 @@ setTimeout(function () {
             function checkIfDateSelected() {
               const activeDatepicker = getActiveDatepicker();
               if (activeDatepicker && activeDatepicker.val()) {
-                console.log(`Date selected in ${activeDatepicker.attr('id')}: ${activeDatepicker.val()}`);
+                console.log(
+                  `Date selected in ${activeDatepicker.attr(
+                    "id"
+                  )}: ${activeDatepicker.val()}`
+                );
                 dateSelectionComplete(); // Call dateSelectionComplete when date is selected
                 return true;
               }
@@ -821,7 +898,9 @@ setTimeout(function () {
               const activeDatepicker = getActiveDatepicker();
               if (activeDatepicker) {
                 activeDatepicker.blur();
-                console.log(`Removed focus from ${activeDatepicker.attr("id")}`);
+                console.log(
+                  `Removed focus from ${activeDatepicker.attr("id")}`
+                );
               }
             }
 
@@ -833,7 +912,9 @@ setTimeout(function () {
               debugDatepicker();
 
               if (checkIfDateSelected()) {
-                console.log("[Date Selection] Target date successfully selected");
+                console.log(
+                  "[Date Selection] Target date successfully selected"
+                );
                 removeDatepickerFocus();
                 clearInterval(interval);
                 return;
@@ -871,7 +952,7 @@ setTimeout(function () {
           // Function to initiate time selection after date is selected
           function initiateTimeSelection() {
             console.log("[Time Selection] Starting time selection process");
-            const targetTime = ['14:30', '14:40', '14:50'];
+            const targetTime = ["14:30", "14:40", "14:50"];
 
             function isTimeAvailable(timeValue) {
               const timeOption = $('select[name="time"] option').filter(
@@ -886,7 +967,8 @@ setTimeout(function () {
                 !timeOption.attr("disabled");
 
               console.log(
-                `Checking time ${timeValue}: ${available ? "Available" : "Not available"
+                `Checking time ${timeValue}: ${
+                  available ? "Available" : "Not available"
                 }`
               );
               return available;
@@ -995,18 +1077,16 @@ setTimeout(function () {
               }
             }
 
-              let player1f = "";
-              let player1l = "";
-              // Member 3 is the user's companionl
-              let player2f = "Jane Doe";
-              let player2l = "Doe";
-              // Member 4 is the user's companion
-              let player3f = "Nathan"
-              let player3l = "Drake";
+            let player1f = inputValues.member1_firstname;
+            let player1l = inputValues.member1_lastname;
+            // Member 3 is the user's companionl
+            let player2f = inputValues.member2_firstname;
+            let player2l = inputValues.member2_lastname;
+            // Member 4 is the user's companion
+            let player3f = inputValues.member3_firstname;
+            let player3l = inputValues.member3_lastname;
 
-              let availablePlayers = [];
-
-              function inputPlayerDetails() {
+            function inputPlayerDetails() {
               // Wait for time selection to complete
               if (!checkIfTimeSelected()) {
                 setTimeout(inputPlayerDetails, 3000);
@@ -1017,20 +1097,24 @@ setTimeout(function () {
 
               // Function to input player details
               function inputPlayer(number, firstName, lastName) {
-                const firstNameField = document.querySelector(`input[name="player${number}f"]`);
-                const lastNameField = document.querySelector(`input[name="player${number}l"]`);
-                
+                const firstNameField = document.querySelector(
+                  `input[name="player${number}f"]`
+                );
+                const lastNameField = document.querySelector(
+                  `input[name="player${number}l"]`
+                );
+
                 if (firstNameField && lastNameField) {
-                firstNameField.focus();
-                firstNameField.value = firstName;
-                firstNameField.dispatchEvent(new Event('input'));
-                
-                lastNameField.focus();
-                lastNameField.value = lastName;
-                lastNameField.dispatchEvent(new Event('input'));
-                
-                console.log(`Player ${number} details input complete`);
-                return true;
+                  firstNameField.focus();
+                  firstNameField.value = firstName;
+                  firstNameField.dispatchEvent(new Event("input"));
+
+                  lastNameField.focus();
+                  lastNameField.value = lastName;
+                  lastNameField.dispatchEvent(new Event("input"));
+
+                  console.log(`Player ${number} details input complete`);
+                  return true;
                 }
                 return false;
               }
@@ -1039,13 +1123,10 @@ setTimeout(function () {
               setTimeout(() => inputPlayer(1, player1f, player1l), 1000);
               setTimeout(() => inputPlayer(2, player2f, player2l), 2000);
               setTimeout(() => inputPlayer(3, player3f, player3l), 3000);
-              }
+            }
 
-              // Start the player input process after time selection
-              inputPlayerDetails();
-
-
-
+            // Start the player input process after time selection
+            inputPlayerDetails();
             // Main execution logic
             const maxAttempts = 5;
             let attempts = 0;
@@ -1095,166 +1176,6 @@ setTimeout(function () {
             }, 1000);
           }
 
-          function inputCompanionDetails() {
-            console.log('[Companion Details] Initializing companion details input process');
-            
-            const companions = {
-              player2: { first: 'Bea', last: 'Tronco' },
-              player3: { first: 'Joaquin', last: 'Tronco' },
-              player4: { first: 'Lloyd', last: 'Tronco' }
-            };
-
-            // Function to scan for form group presence
-            function scanForFormGroup() {
-              console.log('[Form Scanner] Starting form group scan');
-              
-              // Look for specific elements that indicate form presence
-              const formGroupIndicators = {
-                container: document.querySelector('.form-group'),
-                player2Label: document.querySelector('label:contains("Player 2:")'),
-                player2Input: document.querySelector('input[name="player1f"]'),
-                anyPlayerInput: document.querySelector('input[name^="player"]')
-              };
-
-              // Log what we found
-              Object.entries(formGroupIndicators).forEach(([key, element]) => {
-                console.log(`[Form Scanner] ${key}: ${element ? 'Found' : 'Not Found'}`);
-              });
-
-              return formGroupIndicators.container && formGroupIndicators.anyPlayerInput;
-            }
-
-            // Function to wait for form elements to be ready
-            function waitForForm() {
-              console.log('[Form Wait] Starting form wait cycle');
-              
-              return new Promise((resolve) => {
-                let attempts = 0;
-                const maxAttempts = 30;
-                
-                const checkForm = setInterval(() => {
-                  attempts++;
-                  console.log(`[Form Wait] Attempt ${attempts}/${maxAttempts}`);
-                  
-                  if (scanForFormGroup()) {
-                    console.log('[Form Wait] Form group found, proceeding with input');
-                    clearInterval(checkForm);
-                    resolve(true);
-                  } else if (attempts >= maxAttempts) {
-                    console.log('[Form Wait] Max attempts reached, stopping wait cycle');
-                    clearInterval(checkForm);
-                    resolve(false);
-                  }
-                }, 1000);
-              });
-            }
-
-            // Function to input a single player's details
-            function inputPlayerDetails(playerNum, firstName, lastName) {
-              console.log(`[Player Input] Attempting to input details for Player ${playerNum}`);
-              
-              const firstNameField = document.querySelector(`input[name="player${playerNum}f"]`);
-              const lastNameField = document.querySelector(`input[name="player${playerNum}l"]`);
-              
-              if (!firstNameField || !lastNameField) {
-                console.error(`[Player Input] Could not find input fields for Player ${playerNum}`);
-                return false;
-              }
-
-              try {
-                // Clear existing values first
-                firstNameField.value = '';
-                lastNameField.value = '';
-                
-                // Input new values
-                firstNameField.value = firstName;
-                lastNameField.value = lastName;
-                
-                // Trigger events
-                ['input', 'change', 'blur'].forEach(eventType => {
-                  firstNameField.dispatchEvent(new Event(eventType, { bubbles: true }));
-                  lastNameField.dispatchEvent(new Event(eventType, { bubbles: true }));
-                });
-
-                console.log(`[Player Input] Successfully input details for Player ${playerNum}`);
-                return true;
-              } catch (error) {
-                console.error(`[Player Input] Error inputting details for Player ${playerNum}:`, error);
-                return false;
-              }
-            }
-
-            // Function to verify player details
-            function verifyPlayerDetails(playerNum, firstName, lastName) {
-              const firstNameField = document.querySelector(`input[name="player${playerNum}f"]`);
-              const lastNameField = document.querySelector(`input[name="player${playerNum}l"]`);
-              
-              const firstNameMatch = firstNameField?.value === firstName;
-              const lastNameMatch = lastNameField?.value === lastName;
-              
-              console.log(`[Verify] Player ${playerNum} First Name: ${firstNameMatch ? 'Match' : 'Mismatch'}`);
-              console.log(`[Verify] Player ${playerNum} Last Name: ${lastNameMatch ? 'Match' : 'Mismatch'}`);
-              
-              return firstNameMatch && lastNameMatch;
-            }
-
-            // Main execution function
-            async function executeInputProcess() {
-              console.log('[Execute] Starting main input process');
-              
-              const formReady = await waitForForm();
-              if (!formReady) {
-                console.error('[Execute] Form not found after maximum attempts');
-                return;
-              }
-
-              // Add a small delay after form is found
-              await new Promise(resolve => setTimeout(resolve, 1000));
-
-              // Input details for each player
-              const playerInputs = [
-                { num: '1', data: companions.player2 },
-                { num: '2', data: companions.player3 },
-                { num: '3', data: companions.player4 }
-              ];
-
-              let allInputsSuccessful = true;
-              
-              for (const player of playerInputs) {
-                const success = inputPlayerDetails(player.num, player.data.first, player.data.last);
-                if (!success) {
-                  allInputsSuccessful = false;
-                  break;
-                }
-                // Add small delay between inputs
-                await new Promise(resolve => setTimeout(resolve, 500));
-              }
-
-              if (allInputsSuccessful) {
-                console.log('[Execute] All player details input successfully');
-                
-                // Verify all inputs
-                const allVerified = playerInputs.every(player => 
-                  verifyPlayerDetails(player.num, player.data.first, player.data.last)
-                );
-
-                if (allVerified) {
-                  console.log('[Execute] All player details verified successfully');
-                  updateState(State.BOOKING_COMPLETED);
-                } else {
-                  console.log('[Execute] Verification failed, retrying entire process');
-                  setTimeout(executeInputProcess, 1000);
-                }
-              } else {
-                console.log('[Execute] Some inputs failed, retrying entire process');
-                setTimeout(executeInputProcess, 1000);
-              }
-            }
-
-            // Start the process
-            executeInputProcess();
-          }
-
           // Start the sequence with course selection
           setTimeout(selectCourse, 3000);
         } else {
@@ -1263,6 +1184,24 @@ setTimeout(function () {
       } else {
         console.error("[Error] Unknown page type, automation cannot proceed");
       }
+    }
+
+    // Add this function to handle stopping the automation
+    function stopAutomation() {
+      // Clear any running timers or automation processes
+      if (window.automationTimer) {
+        clearTimeout(window.automationTimer);
+        window.automationTimer = null;
+      }
+
+      // Reset automation state and next run time
+      isAutomationActive = false;
+      nextScheduledRun = null;
+      const updateRunMsg =
+        "No date and time scheduled, please run the automation again";
+      updateNextRunDisplay(updateRunMsg);
+
+      // Additional cleanup code can be added here
     }
 
     // Initialize GUI when page loads
