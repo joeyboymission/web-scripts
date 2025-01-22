@@ -244,7 +244,9 @@ setTimeout(() => {
             console.log("[Date Selection] Date selection completed");
 
             // Trigger time selection after date is selected with delay
-            console.log("[Time Selection] Waiting 1 second before starting time selection...");
+            console.log(
+              "[Time Selection] Waiting 1 second before starting time selection..."
+            );
             setTimeout(initiateTimeSelection, 1000); // Reduced delay to 1 second
           }
 
@@ -297,7 +299,8 @@ setTimeout(() => {
                 )
               ) {
                 console.log(
-                  `Target date ${targetDate.year}-${targetDate.month + 1}-${targetDate.day
+                  `Target date ${targetDate.year}-${targetDate.month + 1}-${
+                    targetDate.day
                   } is available, selecting it`
                 );
                 return clickDate(
@@ -309,7 +312,8 @@ setTimeout(() => {
 
               // If target date is not available, log and terminate
               console.log(
-                `Target date ${targetDate.year}-${targetDate.month + 1}-${targetDate.day
+                `Target date ${targetDate.year}-${targetDate.month + 1}-${
+                  targetDate.day
                 } is not available`
               );
               console.log(
@@ -384,7 +388,11 @@ setTimeout(() => {
           function checkIfDateSelected() {
             const activeDatepicker = getActiveDatepicker();
             if (activeDatepicker && activeDatepicker.val()) {
-              console.log(`Date selected in ${activeDatepicker.attr('id')}: ${activeDatepicker.val()}`);
+              console.log(
+                `Date selected in ${activeDatepicker.attr(
+                  "id"
+                )}: ${activeDatepicker.val()}`
+              );
               dateSelectionComplete(); // Call dateSelectionComplete when date is selected
               return true;
             }
@@ -445,7 +453,7 @@ setTimeout(() => {
         // Function to initiate time selection after date is selected
         function initiateTimeSelection() {
           console.log("[Time Selection] Starting time selection process");
-          const targetTime = ['14:30', '14:40', '14:50'];
+          const targetTime = ["14:30", "14:40", "14:50"];
 
           function isTimeAvailable(timeValue) {
             const timeOption = $('select[name="time"] option').filter(
@@ -460,7 +468,8 @@ setTimeout(() => {
               !timeOption.attr("disabled");
 
             console.log(
-              `Checking time ${timeValue}: ${available ? "Available" : "Not available"
+              `Checking time ${timeValue}: ${
+                available ? "Available" : "Not available"
               }`
             );
             return available;
@@ -569,18 +578,18 @@ setTimeout(() => {
             }
           }
 
-            let player1f = "";
-            let player1l = "";
-            // Member 3 is the user's companionl
-            let player2f = "Jane Doe";
-            let player2l = "Doe";
-            // Member 4 is the user's companion
-            let player3f = "Nathan"
-            let player3l = "Drake";
+          let player1f = "";
+          let player1l = "";
+          // Member 3 is the user's companionl
+          let player2f = "Jane Doe";
+          let player2l = "Doe";
+          // Member 4 is the user's companion
+          let player3f = "Nathan";
+          let player3l = "Drake";
 
-            let availablePlayers = [];
+          let availablePlayers = [];
 
-            function inputPlayerDetails() {
+          function inputPlayerDetails() {
             // Wait for time selection to complete
             if (!checkIfTimeSelected()) {
               setTimeout(inputPlayerDetails, 3000);
@@ -591,20 +600,24 @@ setTimeout(() => {
 
             // Function to input player details
             function inputPlayer(number, firstName, lastName) {
-              const firstNameField = document.querySelector(`input[name="player${number}f"]`);
-              const lastNameField = document.querySelector(`input[name="player${number}l"]`);
-              
+              const firstNameField = document.querySelector(
+                `input[name="player${number}f"]`
+              );
+              const lastNameField = document.querySelector(
+                `input[name="player${number}l"]`
+              );
+
               if (firstNameField && lastNameField) {
-              firstNameField.focus();
-              firstNameField.value = firstName;
-              firstNameField.dispatchEvent(new Event('input'));
-              
-              lastNameField.focus();
-              lastNameField.value = lastName;
-              lastNameField.dispatchEvent(new Event('input'));
-              
-              console.log(`Player ${number} details input complete`);
-              return true;
+                firstNameField.focus();
+                firstNameField.value = firstName;
+                firstNameField.dispatchEvent(new Event("input"));
+
+                lastNameField.focus();
+                lastNameField.value = lastName;
+                lastNameField.dispatchEvent(new Event("input"));
+
+                console.log(`Player ${number} details input complete`);
+                return true;
               }
               return false;
             }
@@ -613,12 +626,10 @@ setTimeout(() => {
             setTimeout(() => inputPlayer(1, player1f, player1l), 1000);
             setTimeout(() => inputPlayer(2, player2f, player2l), 2000);
             setTimeout(() => inputPlayer(3, player3f, player3l), 3000);
-            }
+          }
 
-            // Start the player input process after time selection
-            inputPlayerDetails();
-
-
+          // Start the player input process after time selection
+          inputPlayerDetails();
 
           // Main execution logic
           const maxAttempts = 5;
@@ -670,52 +681,65 @@ setTimeout(() => {
         }
 
         function inputCompanionDetails() {
-          console.log('[Companion Details] Initializing companion details input process');
-          
+          console.log(
+            "[Companion Details] Initializing companion details input process"
+          );
+
           const companions = {
-            player2: { first: 'Bea', last: 'Tronco' },
-            player3: { first: 'Joaquin', last: 'Tronco' },
-            player4: { first: 'Lloyd', last: 'Tronco' }
+            player2: { first: "Bea", last: "Tronco" },
+            player3: { first: "Joaquin", last: "Tronco" },
+            player4: { first: "Lloyd", last: "Tronco" },
           };
 
           // Function to scan for form group presence
           function scanForFormGroup() {
-            console.log('[Form Scanner] Starting form group scan');
-            
+            console.log("[Form Scanner] Starting form group scan");
+
             // Look for specific elements that indicate form presence
             const formGroupIndicators = {
-              container: document.querySelector('.form-group'),
-              player2Label: document.querySelector('label:contains("Player 2:")'),
+              container: document.querySelector(".form-group"),
+              player2Label: document.querySelector(
+                'label:contains("Player 2:")'
+              ),
               player2Input: document.querySelector('input[name="player1f"]'),
-              anyPlayerInput: document.querySelector('input[name^="player"]')
+              anyPlayerInput: document.querySelector('input[name^="player"]'),
             };
 
             // Log what we found
             Object.entries(formGroupIndicators).forEach(([key, element]) => {
-              console.log(`[Form Scanner] ${key}: ${element ? 'Found' : 'Not Found'}`);
+              console.log(
+                `[Form Scanner] ${key}: ${element ? "Found" : "Not Found"}`
+              );
             });
 
-            return formGroupIndicators.container && formGroupIndicators.anyPlayerInput;
+            return (
+              formGroupIndicators.container &&
+              formGroupIndicators.anyPlayerInput
+            );
           }
 
           // Function to wait for form elements to be ready
           function waitForForm() {
-            console.log('[Form Wait] Starting form wait cycle');
-            
+            console.log("[Form Wait] Starting form wait cycle");
+
             return new Promise((resolve) => {
               let attempts = 0;
               const maxAttempts = 30;
-              
+
               const checkForm = setInterval(() => {
                 attempts++;
                 console.log(`[Form Wait] Attempt ${attempts}/${maxAttempts}`);
-                
+
                 if (scanForFormGroup()) {
-                  console.log('[Form Wait] Form group found, proceeding with input');
+                  console.log(
+                    "[Form Wait] Form group found, proceeding with input"
+                  );
                   clearInterval(checkForm);
                   resolve(true);
                 } else if (attempts >= maxAttempts) {
-                  console.log('[Form Wait] Max attempts reached, stopping wait cycle');
+                  console.log(
+                    "[Form Wait] Max attempts reached, stopping wait cycle"
+                  );
                   clearInterval(checkForm);
                   resolve(false);
                 }
@@ -725,102 +749,145 @@ setTimeout(() => {
 
           // Function to input a single player's details
           function inputPlayerDetails(playerNum, firstName, lastName) {
-            console.log(`[Player Input] Attempting to input details for Player ${playerNum}`);
-            
-            const firstNameField = document.querySelector(`input[name="player${playerNum}f"]`);
-            const lastNameField = document.querySelector(`input[name="player${playerNum}l"]`);
-            
+            console.log(
+              `[Player Input] Attempting to input details for Player ${playerNum}`
+            );
+
+            const firstNameField = document.querySelector(
+              `input[name="player${playerNum}f"]`
+            );
+            const lastNameField = document.querySelector(
+              `input[name="player${playerNum}l"]`
+            );
+
             if (!firstNameField || !lastNameField) {
-              console.error(`[Player Input] Could not find input fields for Player ${playerNum}`);
+              console.error(
+                `[Player Input] Could not find input fields for Player ${playerNum}`
+              );
               return false;
             }
 
             try {
               // Clear existing values first
-              firstNameField.value = '';
-              lastNameField.value = '';
-              
+              firstNameField.value = "";
+              lastNameField.value = "";
+
               // Input new values
               firstNameField.value = firstName;
               lastNameField.value = lastName;
-              
+
               // Trigger events
-              ['input', 'change', 'blur'].forEach(eventType => {
-                firstNameField.dispatchEvent(new Event(eventType, { bubbles: true }));
-                lastNameField.dispatchEvent(new Event(eventType, { bubbles: true }));
+              ["input", "change", "blur"].forEach((eventType) => {
+                firstNameField.dispatchEvent(
+                  new Event(eventType, { bubbles: true })
+                );
+                lastNameField.dispatchEvent(
+                  new Event(eventType, { bubbles: true })
+                );
               });
 
-              console.log(`[Player Input] Successfully input details for Player ${playerNum}`);
+              console.log(
+                `[Player Input] Successfully input details for Player ${playerNum}`
+              );
               return true;
             } catch (error) {
-              console.error(`[Player Input] Error inputting details for Player ${playerNum}:`, error);
+              console.error(
+                `[Player Input] Error inputting details for Player ${playerNum}:`,
+                error
+              );
               return false;
             }
           }
 
           // Function to verify player details
           function verifyPlayerDetails(playerNum, firstName, lastName) {
-            const firstNameField = document.querySelector(`input[name="player${playerNum}f"]`);
-            const lastNameField = document.querySelector(`input[name="player${playerNum}l"]`);
-            
+            const firstNameField = document.querySelector(
+              `input[name="player${playerNum}f"]`
+            );
+            const lastNameField = document.querySelector(
+              `input[name="player${playerNum}l"]`
+            );
+
             const firstNameMatch = firstNameField?.value === firstName;
             const lastNameMatch = lastNameField?.value === lastName;
-            
-            console.log(`[Verify] Player ${playerNum} First Name: ${firstNameMatch ? 'Match' : 'Mismatch'}`);
-            console.log(`[Verify] Player ${playerNum} Last Name: ${lastNameMatch ? 'Match' : 'Mismatch'}`);
-            
+
+            console.log(
+              `[Verify] Player ${playerNum} First Name: ${
+                firstNameMatch ? "Match" : "Mismatch"
+              }`
+            );
+            console.log(
+              `[Verify] Player ${playerNum} Last Name: ${
+                lastNameMatch ? "Match" : "Mismatch"
+              }`
+            );
+
             return firstNameMatch && lastNameMatch;
           }
 
           // Main execution function
           async function executeInputProcess() {
-            console.log('[Execute] Starting main input process');
-            
+            console.log("[Execute] Starting main input process");
+
             const formReady = await waitForForm();
             if (!formReady) {
-              console.error('[Execute] Form not found after maximum attempts');
+              console.error("[Execute] Form not found after maximum attempts");
               return;
             }
 
             // Add a small delay after form is found
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, 1000));
 
             // Input details for each player
             const playerInputs = [
-              { num: '1', data: companions.player2 },
-              { num: '2', data: companions.player3 },
-              { num: '3', data: companions.player4 }
+              { num: "1", data: companions.player2 },
+              { num: "2", data: companions.player3 },
+              { num: "3", data: companions.player4 },
             ];
 
             let allInputsSuccessful = true;
-            
+
             for (const player of playerInputs) {
-              const success = inputPlayerDetails(player.num, player.data.first, player.data.last);
+              const success = inputPlayerDetails(
+                player.num,
+                player.data.first,
+                player.data.last
+              );
               if (!success) {
                 allInputsSuccessful = false;
                 break;
               }
               // Add small delay between inputs
-              await new Promise(resolve => setTimeout(resolve, 500));
+              await new Promise((resolve) => setTimeout(resolve, 500));
             }
 
             if (allInputsSuccessful) {
-              console.log('[Execute] All player details input successfully');
-              
+              console.log("[Execute] All player details input successfully");
+
               // Verify all inputs
-              const allVerified = playerInputs.every(player => 
-                verifyPlayerDetails(player.num, player.data.first, player.data.last)
+              const allVerified = playerInputs.every((player) =>
+                verifyPlayerDetails(
+                  player.num,
+                  player.data.first,
+                  player.data.last
+                )
               );
 
               if (allVerified) {
-                console.log('[Execute] All player details verified successfully');
+                console.log(
+                  "[Execute] All player details verified successfully"
+                );
                 updateState(State.BOOKING_COMPLETED);
               } else {
-                console.log('[Execute] Verification failed, retrying entire process');
+                console.log(
+                  "[Execute] Verification failed, retrying entire process"
+                );
                 setTimeout(executeInputProcess, 1000);
               }
             } else {
-              console.log('[Execute] Some inputs failed, retrying entire process');
+              console.log(
+                "[Execute] Some inputs failed, retrying entire process"
+              );
               setTimeout(executeInputProcess, 1000);
             }
           }

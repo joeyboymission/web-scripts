@@ -21,11 +21,6 @@ setTimeout(function () {
 
   (function () {
     "use strict";
-
-    // State management
-    let isAutomationActive = false;
-    let formContainer = null;
-
     // Data for the GUI
     const GOLF_COURSE_NAMES = {
       1: "Highlands Golf Course",
@@ -100,6 +95,32 @@ setTimeout(function () {
 
     // Add this global variable to store the next run time
     let nextScheduledRun = null;
+
+    // State management
+    const State = {
+      INIT: "INIT",
+      LOGIN_STARTED: "LOGIN_STARTED",
+      LOGIN_COMPLETED: "LOGIN_COMPLETED",
+      BOOKING_STARTED: "BOOKING_STARTED",
+      COURSE_SELECTED: "COURSE_SELECTED",
+      DATE_SELECTED: "DATE_SELECTED",
+      TIME_SELECTED: "TIME_SELECTED",
+      BOOKING_COMPLETED: "BOOKING_COMPLETED",
+    };
+
+    // State management
+    let isAutomationActive = false;
+    let formContainer = null;
+
+    // Get current state or set initial state
+    let currentState = localStorage.getItem("automationState") || State.INIT;
+    console.log("[State Management] Current State:", currentState);
+
+    function updateState(newState) {
+      currentState = newState;
+      localStorage.setItem("automationState", newState);
+      console.log("[State Management] State updated to:", newState);
+    }
 
     // Create the GUI for the user inputs
     function createFloatingGUI() {
@@ -241,60 +262,6 @@ setTimeout(function () {
       setupGUIEventListeners();
     }
 
-    // Add these helper functions for button management
-    function setButtonState(buttonId, enabled) {
-      const button = document.getElementById(buttonId);
-      if (button) {
-        button.disabled = !enabled;
-        button.style.opacity = enabled ? "1" : "0.5";
-        button.style.cursor = enabled ? "pointer" : "not-allowed";
-      }
-    }
-
-    // Setup the event listeners for the GUI
-    function setupGUIEventListeners() {
-      // Initial button states
-      setButtonState("startBtn", true); // Start enabled
-      setButtonState("stopBtn", false); // Stop disabled
-
-      // Start button
-      document.getElementById("startBtn")?.addEventListener("click", () => {
-        console.log("Start button clicked - checking form values:");
-        debugFormValues();
-
-        if (validateInputs()) {
-          // Disable start button, enable stop button
-          setButtonState("startBtn", false);
-          setButtonState("stopBtn", true);
-
-          triggerStart();
-          updateStatus("Trigger time set activated");
-        } else {
-          console.log("Validation failed - see above logs for details");
-        }
-      });
-
-      // Stop button
-      document.getElementById("stopBtn")?.addEventListener("click", () => {
-        // Disable stop button, enable start button
-        setButtonState("stopBtn", false);
-        setButtonState("startBtn", true);
-
-        stopAutomation(); // This will be implemented later
-        updateStatus("Automation stopped");
-        console.log("Automation stopped");
-      });
-
-      // Minimize button
-      document.getElementById("minimizeGUI")?.addEventListener("click", () => {
-        const content = document.getElementById("guiContent");
-        if (content) {
-          content.style.display =
-            content.style.display === "none" ? "block" : "none";
-        }
-      });
-    }
-
     // Page detection function
     function detectPage() {
       const currentURL = window.location.href;
@@ -323,6 +290,106 @@ setTimeout(function () {
         console.log("Unknown page detected");
         return "unknown-page"; // value for unknown page
       }
+    }
+
+    // Add these helper functions for button management
+    function setButtonState(buttonId, enabled) {
+      const button = document.getElementById(buttonId);
+      if (button) {
+        button.disabled = !enabled;
+        button.style.opacity = enabled ? "1" : "0.5";
+        button.style.cursor = enabled ? "pointer" : "not-allowed";
+      }
+    }
+
+    // Setup the event listeners for the GUI
+    function setupGUIEventListeners() {
+      // Initial button states
+      setButtonState("startBtn", true); // Start enabled
+      setButtonState("stopBtn", false); // Stop disabled
+
+      // Start button
+      document.getElementById("startBtn")?.addEventListener("click", () => {
+        console.log("Start button clicked - checking form values:");
+        debugFormValues();
+
+        if (validateInputs()) {
+          // Get form data directly
+          const formData = {
+            userName: document.getElementById("username_input")?.value || "",
+            password: document.getElementById("password_input")?.value || "",
+            dateTrigger:
+              document.getElementById("triggerTime_input")?.value || "",
+            timeTrigger: "",
+            selectedCourse:
+              document.getElementById("courseSelect_input")?.value || "",
+            bookingDate:
+              document.getElementById("bookingDate_input")?.value || "",
+            timeSlots: Array.from(
+              document.querySelectorAll('input[type="checkbox"]:checked')
+            ).map((cb) => cb.value),
+            isAutomationActive: true,
+            isFormVisible: true,
+            lastPage: "login",
+            members: {
+              member2: {
+                firstName: document.getElementById("member2_fn")?.value || "",
+                lastName: document.getElementById("member2_ln")?.value || "",
+              },
+              member3: {
+                firstName: document.getElementById("member3_fn")?.value || "",
+                lastName: document.getElementById("member3_ln")?.value || "",
+              },
+              member4: {
+                firstName: document.getElementById("member4_fn")?.value || "",
+                lastName: document.getElementById("member4_ln")?.value || "",
+              },
+            },
+          };
+
+          // Save directly to localStorage
+          try {
+            localStorage.setItem("teetime_state", JSON.stringify(formData));
+            console.log("Data saved successfully:", formData);
+
+            // Disable start button, enable stop button
+            setButtonState("startBtn", false);
+            setButtonState("stopBtn", true);
+
+            //triggerStart(); // bypass triggerStart function for debugging
+            //console.log("Trigger start function called");
+            currentState = State.LOGIN_STARTED;
+            setTimeout(startAutomation, 3000);
+
+            updateStatus("Trigger time set activated");
+          } catch (error) {
+            console.error("Error saving data:", error);
+            alert("Error saving settings. Please try again.");
+          }
+        } else {
+          console.log("Validation failed - see above logs for details");
+        }
+      });
+
+      // Stop button
+      document.getElementById("stopBtn")?.addEventListener("click", () => {
+        // Disable stop button, enable start button
+        setButtonState("stopBtn", false);
+        setButtonState("startBtn", true);
+
+        stopAutomation();
+        updateStatus("Automation stopped");
+        console.log("Automation stopped");
+      });
+
+      // Minimize button
+      document.getElementById("minimizeGUI")?.addEventListener("click", () => {
+        const content = document.getElementById("guiContent");
+        if (content) {
+          content.style.display =
+            content.style.display === "none" ? "block" : "none";
+        }
+      });
     }
 
     // Validate the user inputs
@@ -391,10 +458,15 @@ setTimeout(function () {
       }
 
       // Validate booking date
-      const bookingDate = new Date(formInputs.bookingDate.value);
-      if (isNaN(bookingDate.getTime())) {
-        console.log(`❌ Invalid booking date: ${formInputs.bookingDate.value}`);
-        alert("Please select a valid booking date");
+      const savedBookingDate = formInputs.bookingDate.value;
+      if (!savedBookingDate) {
+        console.error("No booking date found in form data");
+        return false;
+      }
+
+      const bookingDateObj = new Date(savedBookingDate);
+      if (isNaN(bookingDateObj.getTime())) {
+        console.error("Invalid booking date format:", savedBookingDate);
         return false;
       }
 
@@ -402,6 +474,259 @@ setTimeout(function () {
       updateStatus("Validation successful");
       return true;
     }
+
+    // Persistently removing any modal that may appear
+    function closeModal() {
+      // Specifically target the wrongpass modal first
+      const wrongPassModal = document.querySelector(".modal.wrongpass.show");
+      const anyModal = document.querySelector(".modal.show");
+      const modalToClose = wrongPassModal || anyModal;
+
+      if (modalToClose) {
+        try {
+          // Click the close button if it exists
+          const closeButton = modalToClose.querySelector(
+            ".btn-close, .btn-secondary"
+          );
+          if (closeButton) {
+            closeButton.click();
+          }
+
+          // Force cleanup if modal still persists
+          modalToClose.classList.remove("show");
+          modalToClose.classList.remove("fade");
+          modalToClose.style.display = "none";
+          modalToClose.setAttribute("aria-modal", "false");
+          modalToClose.setAttribute("aria-hidden", "true");
+
+          // Remove backdrop
+          const backdrop = document.querySelector(".modal-backdrop");
+          if (backdrop) {
+            backdrop.remove();
+          }
+
+          // Clean up body
+          document.body.classList.remove("modal-open");
+          document.body.style.removeProperty("padding-right");
+          document.body.style.overflow = "auto";
+
+          // Clean up modal
+          modalToClose.style.removeProperty("padding-right");
+
+          console.log("Modal killed successfully");
+        } catch (error) {
+          console.error("Error closing modal:", error);
+        }
+      }
+    }
+
+    // Initial cleanup
+    closeModal();
+
+    // Set up continuous monitoring
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (
+          mutation.addedNodes.length ||
+          (mutation.target.classList &&
+            mutation.target.classList.contains("show"))
+        ) {
+          closeModal();
+        }
+      });
+    });
+
+    // Start observing with enhanced options
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    // Additional interval check for stubborn modals
+    setInterval(closeModal, 1000);
+
+    // Modified storage helper functions with debug logging
+    function saveAutomationData(data) {
+      try {
+        // Create consistent data structure
+        const storageData = {
+          formVisible: true,
+          userName: data.username || data.userName, // Handle both cases
+          password: data.password,
+          dateTrigger: data.triggerTime || data.dateTrigger, // Handle both cases
+          selectedCourse: data.course || data.selectedCourse, // Handle both cases
+          bookingDate: data.bookingDate,
+          timeSlots: data.timeSlots,
+          isAutomationActive: true,
+          isFormVisible: true,
+          lastPage: "login",
+          members: {
+            member2: {
+              firstName: data.members?.member2?.firstName || "",
+              lastName: data.members?.member2?.lastName || "",
+            },
+            member3: {
+              firstName: data.members?.member3?.firstName || "",
+              lastName: data.members?.member3?.lastName || "",
+            },
+            member4: {
+              firstName: data.members?.member4?.firstName || "",
+              lastName: data.members?.member4?.lastName || "",
+            },
+          },
+        };
+
+        const dataString = JSON.stringify(storageData);
+        localStorage.setItem("teetime_state", dataString);
+
+        // Debug logging
+        console.log("Saved automation data:", storageData);
+
+        return true;
+      } catch (error) {
+        console.error("Error saving automation data:", error);
+        return false;
+      }
+    }
+
+    function getAutomationData() {
+      try {
+        const rawData = localStorage.getItem("teetime_state");
+        if (!rawData) {
+          console.log("No automation data found in localStorage");
+          return null;
+        }
+
+        const data = JSON.parse(rawData);
+        console.log("Retrieved automation data:", data);
+
+        // Normalize the data structure to ensure consistency
+        return {
+          username: data.userName || data.username, // Handle both cases
+          password: data.password,
+          triggerTime: data.dateTrigger || data.triggerTime, // Handle both cases
+          course: data.selectedCourse || data.course, // Handle both cases
+          bookingDate: data.bookingDate,
+          timeSlots: data.timeSlots,
+          isAutomationActive: data.isAutomationActive,
+          isFormVisible: data.isFormVisible,
+          lastPage: data.lastPage,
+          members: data.members || {},
+        };
+      } catch (error) {
+        console.error("Error getting automation data:", error);
+        return null;
+      }
+    }
+
+    function clearAutomationData() {
+      localStorage.removeItem("teetime_state");
+    }
+
+    // Modify the triggerStart function to ensure data is being saved
+    function triggerStart() {
+      console.log("triggerStart called");
+
+      // Get all form values
+      const formData = {
+        username: document.getElementById("username_input")?.value || "",
+        password: document.getElementById("password_input")?.value || "",
+        triggerTime: document.getElementById("triggerTime_input")?.value || "",
+        course: document.getElementById("courseSelect_input")?.value || "",
+        bookingDate: document.getElementById("bookingDate_input")?.value || "",
+        timeSlots: Array.from(
+          document.querySelectorAll('input[type="checkbox"]:checked')
+        ).map((cb) => cb.value),
+        members: {
+          member2: {
+            firstName: document.getElementById("member2_fn")?.value || "",
+            lastName: document.getElementById("member2_ln")?.value || "",
+          },
+          member3: {
+            firstName: document.getElementById("member3_fn")?.value || "",
+            lastName: document.getElementById("member3_ln")?.value || "",
+          },
+          member4: {
+            firstName: document.getElementById("member4_fn")?.value || "",
+            lastName: document.getElementById("member4_ln")?.value || "",
+          },
+        },
+      };
+
+      console.log("Form data collected:", formData);
+
+      // Try to save the data
+      const saveSuccessful = saveAutomationData(formData);
+
+      if (!saveSuccessful) {
+        console.error("Failed to save automation data");
+        alert("There was an error saving your settings. Please try again.");
+        return;
+      }
+
+      // Calculate next run time
+      const triggerDateTime = new Date(formData.triggerTime);
+      const now = new Date();
+
+      if (isNaN(triggerDateTime.getTime()) || triggerDateTime <= now) {
+        console.error("Invalid trigger time");
+        alert("Please select a valid future date and time");
+        return;
+      }
+
+      // Set the next scheduled run time
+      nextScheduledRun = triggerDateTime;
+
+      // Schedule the automation
+      const timeUntilRun = triggerDateTime - now;
+      window.automationTimer = setTimeout(startAutomation, timeUntilRun);
+
+      // Update display
+      updateNextRunDisplay(
+        `Next run scheduled for: ${triggerDateTime.toLocaleString()}`
+      );
+      console.log("Automation scheduled successfully");
+    }
+
+    // Modify stopAutomation function
+    function stopAutomation() {
+      if (window.automationTimer) {
+        clearTimeout(window.automationTimer);
+        window.automationTimer = null;
+      }
+
+      clearAutomationData();
+      localStorage.removeItem("automationState");
+      isAutomationActive = false;
+      nextScheduledRun = null;
+
+      const updateRunMsg =
+        "No date and time scheduled, please run the automation again";
+      updateNextRunDisplay(updateRunMsg);
+    }
+
+    // Add initialization check on page load
+    // This will resume the automation if it was previously running
+    (function checkExistingAutomation() {
+      // Check if the page is in the booking page
+      const pageType = detectPage();
+      if (pageType === "login-page") {
+        console.log("Not in the booking page, skipping automation check");
+        return;
+      } else if (pageType === "booking-page") {
+        console.log("In the booking page, checking for existing automation");
+        const savedData = getAutomationData();
+        if (savedData?.isAutomationActive) {
+          console.log("Found existing automation, resuming...");
+          startAutomation();
+        }
+      } else {
+        console.log("Unknown page, skipping automation check");
+        return;
+      }
+    })();
 
     // Time trigger function
     function triggerStart() {
@@ -515,138 +840,24 @@ setTimeout(function () {
 
     // Main function and automation
     function startAutomation() {
-      // State management
-      const State = {
-        INIT: "INIT",
-        LOGIN_STARTED: "LOGIN_STARTED",
-        LOGIN_COMPLETED: "LOGIN_COMPLETED",
-        BOOKING_STARTED: "BOOKING_STARTED",
-        COURSE_SELECTED: "COURSE_SELECTED",
-        DATE_SELECTED: "DATE_SELECTED",
-        TIME_SELECTED: "TIME_SELECTED",
-        BOOKING_COMPLETED: "BOOKING_COMPLETED",
-      };
+      const savedData = getAutomationData();
 
-      // Get current state or set initial state
-      let currentState = localStorage.getItem("automationState") || State.INIT;
-      console.log("[State Management] Current State:", currentState);
-
-      function updateState(newState) {
-        currentState = newState;
-        localStorage.setItem("automationState", newState);
-        console.log("[State Management] State updated to:", newState);
-      }
-
-      // Include the Page detection for monitoring the page
-      function detectPage() {
-        const currentURL = window.location.href;
-        console.log("Current URL:", currentURL);
-
-        // Login page URLs
-        const loginPages = [
-          "https://tagaytayhighlands-teetime.com/",
-          "https://tagaytayhighlands-teetime.com/index.php",
-        ];
-
-        // Booking page URLs
-        const bookingPages = [
-          "https://tagaytayhighlands-teetime.com/t/index.php?v=1",
-          "https://tagaytayhighlands-teetime.com/t/",
-        ];
-
-        if (loginPages.includes(currentURL)) {
-          console.log("Login page detected");
-          return "login";
-        } else if (bookingPages.some((url) => currentURL.includes(url))) {
-          console.log("Booking page detected");
-          return "booking";
-        } else {
-          console.log("Unknown page detected");
-          return "unknown";
-        }
+      if (!savedData || !savedData.isAutomationActive) {
+        console.log("No active automation found");
+        return;
       }
 
       // Execute page detection
       const pageType = detectPage();
       console.log("[Page Detection] Current page type:", pageType);
 
-      // Persistently removing any modal that may appear
-      function closeModal() {
-        // Specifically target the wrongpass modal first
-        const wrongPassModal = document.querySelector(".modal.wrongpass.show");
-        const anyModal = document.querySelector(".modal.show");
-        const modalToClose = wrongPassModal || anyModal;
-
-        if (modalToClose) {
-          try {
-            // Click the close button if it exists
-            const closeButton = modalToClose.querySelector(
-              ".btn-close, .btn-secondary"
-            );
-            if (closeButton) {
-              closeButton.click();
-            }
-
-            // Force cleanup if modal still persists
-            modalToClose.classList.remove("show");
-            modalToClose.classList.remove("fade");
-            modalToClose.style.display = "none";
-            modalToClose.setAttribute("aria-modal", "false");
-            modalToClose.setAttribute("aria-hidden", "true");
-
-            // Remove backdrop
-            const backdrop = document.querySelector(".modal-backdrop");
-            if (backdrop) {
-              backdrop.remove();
-            }
-
-            // Clean up body
-            document.body.classList.remove("modal-open");
-            document.body.style.removeProperty("padding-right");
-            document.body.style.overflow = "auto";
-
-            // Clean up modal
-            modalToClose.style.removeProperty("padding-right");
-
-            console.log("Modal killed successfully");
-          } catch (error) {
-            console.error("Error closing modal:", error);
-          }
-        }
-      }
-
-      // Initial cleanup
-      closeModal();
-
-      // Set up continuous monitoring
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (
-            mutation.addedNodes.length ||
-            (mutation.target.classList &&
-              mutation.target.classList.contains("show"))
-          ) {
-            closeModal();
-          }
-        });
-      });
-
-      // Start observing with enhanced options
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ["class"],
-      });
-
-      // Additional interval check for stubborn modals
-      setInterval(closeModal, 1000);
-
-      if (pageType === "login") {
+      if (pageType === "login-page") {
         console.log("[Login Page] Starting login process");
         if (currentState !== State.LOGIN_COMPLETED) {
-          let username = "MG03787-000";
-          let password = "nobhill2025";
+          // Get the username and password from the saved data
+          const savedData = getAutomationData();
+          let username = savedData.username;
+          let password = savedData.password;
 
           function attemptLogin() {
             const loginForm = document.querySelector("form");
@@ -686,10 +897,13 @@ setTimeout(function () {
           window.location.href =
             "https://tagaytayhighlands-teetime.com/t/index.php?v=1";
         }
-      } else if (pageType === "booking") {
+      } else if (pageType === "booking-page") {
+        // Expect that the user is already logged in
+        // The program will resume from where it left off
         console.log("[Booking Page] Starting booking process");
         if (currentState !== State.BOOKING_COMPLETED) {
-          const defaultCourse = "2";
+          const savedData = getAutomationData();
+          const selectedCourse = savedData.course;
           const courseNames = {
             1: "Highlands Golf Course",
             2: "Midlands Front 9 - Back 9",
@@ -703,15 +917,15 @@ setTimeout(function () {
             const courseDropdown = document.getElementById("golfcourse");
 
             if (courseDropdown) {
-              courseDropdown.value = defaultCourse;
+              courseDropdown.value = selectedCourse;
               const event = new Event("change", { bubbles: true });
               courseDropdown.dispatchEvent(event);
 
               console.log(
-                `[Booking Page] Selected course: ${courseNames[defaultCourse]}`
+                `[Booking Page] Selected course: ${courseNames[selectedCourse]}`
               );
 
-              const courseDiv = document.getElementById(defaultCourse);
+              const courseDiv = document.getElementById(selectedCourse);
               if (courseDiv) {
                 courseDiv.style.display = "block";
                 updateState(State.COURSE_SELECTED);
@@ -720,382 +934,439 @@ setTimeout(function () {
                 // Trigger date selection after course is selected
                 setTimeout(initiateDateSelection, 2000);
               }
-            } else {
-              console.error("[Booking Page] Course dropdown not found");
-            }
-          }
-
-          // Function to initiate date selection after course is selected
-          function initiateDateSelection() {
-            console.log("[Date Selection] Starting date selection process");
-            const targetDate = {
-              year: 2025,
-              month: 0, // January = 0
-              day: 23,
-            };
-
-            function dateSelectionComplete() {
-              updateState(State.DATE_SELECTED);
-              console.log("[Date Selection] Date selection completed");
-
-              // Trigger time selection after date is selected with delay
-              console.log(
-                "[Time Selection] Waiting 1 second before starting time selection..."
-              );
-              setTimeout(initiateTimeSelection, 1000); // Reduced delay to 1 second
             }
 
-            // Array of all possible datepicker IDs
-            const datepickerIds = [
-              "golfdate",
-              "golfdate2",
-              "golfdate3",
-              "golfdate4",
-            ];
-
-            function getActiveDatepicker() {
-              // Find which datepicker is currently visible/active
-              for (const id of datepickerIds) {
-                const $datepicker = $(`#${id}`);
-                if (
-                  $datepicker.length &&
-                  $datepicker.closest(".myDiv").is(":visible")
-                ) {
-                  return $datepicker;
-                }
+            // Function to initiate date selection after course is selected
+            function initiateDateSelection() {
+              console.log("[Date Selection] Starting date selection process");
+              // Get the target date from the saved data
+              const savedBookingDate = savedData.bookingDate;
+              if (!savedBookingDate) {
+                console.error("No booking date found in saved data");
+                return;
               }
-              return null;
-            }
 
-            function isDateAvailable(year, month, day) {
-              const dateCell = $(
-                `td[data-handler="selectDay"][data-month="${month}"][data-year="${year}"]`
-              ).filter(function () {
-                return (
-                  $(this).find("a.ui-state-default").text() === day.toString()
+              const bookingDateObj = new Date(savedBookingDate);
+              if (isNaN(bookingDateObj.getTime())) {
+                console.error("Invalid booking date format:", savedBookingDate);
+                return;
+              }
+
+              const targetDate = {
+                year: bookingDateObj.getFullYear(),
+                month: bookingDateObj.getMonth(), // January = 0
+                day: bookingDateObj.getDate(),
+              };
+              console.log("Target date parsed:", targetDate);
+
+              function dateSelectionComplete() {
+                updateState(State.DATE_SELECTED);
+                console.log("[Date Selection] Date selection completed");
+
+                // Trigger time selection after date is selected with delay
+                console.log(
+                  "[Time Selection] Waiting 3 second before starting time selection..."
                 );
-              });
+                setTimeout(initiateTimeSelection, 3000); 
+              }
 
-              return (
-                dateCell.length > 0 &&
-                !dateCell.hasClass("ui-datepicker-unselectable") &&
-                !dateCell.hasClass("ui-state-disabled")
-              );
-            }
+              // Array of all possible datepicker IDs
+              const datepickerIds = [
+                "golfdate",
+                "golfdate2",
+                "golfdate3",
+                "golfdate4",
+              ];
 
-            function selectDateInCalendar() {
-              try {
-                // Try to select the target date only
-                if (
-                  isDateAvailable(
-                    targetDate.year,
-                    targetDate.month,
-                    targetDate.day
-                  )
-                ) {
+              function getActiveDatepicker() {
+                // Find which datepicker is currently visible/active
+                for (const id of datepickerIds) {
+                  const $datepicker = $(`#${id}`);
+                  if (
+                    $datepicker.length &&
+                    $datepicker.closest(".myDiv").is(":visible")
+                  ) {
+                    return $datepicker;
+                  }
+                }
+                return null;
+              }
+
+              function isDateAvailable(year, month, day) {
+                const dateCell = $(
+                  `td[data-handler="selectDay"][data-month="${month}"][data-year="${year}"]`
+                ).filter(function () {
+                  return (
+                    $(this).find("a.ui-state-default").text() === day.toString()
+                  );
+                });
+
+                return (
+                  dateCell.length > 0 &&
+                  !dateCell.hasClass("ui-datepicker-unselectable") &&
+                  !dateCell.hasClass("ui-state-disabled")
+                );
+              }
+
+              function selectDateInCalendar() {
+                try {
+                  // Try to select the target date only
+                  if (
+                    isDateAvailable(
+                      targetDate.year,
+                      targetDate.month,
+                      targetDate.day
+                    )
+                  ) {
+                    console.log(
+                      `Target date ${targetDate.year}-${targetDate.month + 1}-${
+                        targetDate.day
+                      } is available, selecting it`
+                    );
+                    return clickDate(
+                      targetDate.year,
+                      targetDate.month,
+                      targetDate.day
+                    );
+                  }
+
+                  // If target date is not available, log and terminate
                   console.log(
                     `Target date ${targetDate.year}-${targetDate.month + 1}-${
                       targetDate.day
-                    } is available, selecting it`
+                    } is not available`
                   );
-                  return clickDate(
-                    targetDate.year,
-                    targetDate.month,
-                    targetDate.day
-                  );
-                }
-
-                // If target date is not available, log and terminate
-                console.log(
-                  `Target date ${targetDate.year}-${targetDate.month + 1}-${
-                    targetDate.day
-                  } is not available`
-                );
-                console.log(
-                  "Script terminating as requested date is unavailable"
-                );
-                removeDatepickerFocus();
-                clearInterval(interval);
-                return false;
-              } catch (error) {
-                console.error("Error selecting date:", error);
-                return false;
-              }
-            }
-
-            function clickDate(year, month, day) {
-              const dateCell = $(
-                `td[data-handler="selectDay"][data-month="${month}"][data-year="${year}"]`
-              ).filter(function () {
-                return (
-                  $(this).find("a.ui-state-default").text() === day.toString()
-                );
-              });
-
-              if (dateCell.length) {
-                const dateLink = dateCell.find("a.ui-state-default");
-                if (dateLink.length) {
-                  dateLink[0].click();
                   console.log(
-                    `Successfully clicked date: ${year}-${month + 1}-${day}`
+                    "Script terminating as requested date is unavailable"
                   );
-                  return true;
+                  removeDatepickerFocus();
+                  clearInterval(interval);
+                  return false;
+                } catch (error) {
+                  console.error("Error selecting date:", error);
+                  return false;
                 }
               }
-              return false;
-            }
 
-            function openDatepicker() {
-              try {
+              function clickDate(year, month, day) {
+                const dateCell = $(
+                  `td[data-handler="selectDay"][data-month="${month}"][data-year="${year}"]`
+                ).filter(function () {
+                  return (
+                    $(this).find("a.ui-state-default").text() === day.toString()
+                  );
+                });
+
+                if (dateCell.length) {
+                  const dateLink = dateCell.find("a.ui-state-default");
+                  if (dateLink.length) {
+                    dateLink[0].click();
+                    console.log(
+                      `Successfully clicked date: ${year}-${month + 1}-${day}`
+                    );
+                    return true;
+                  }
+                }
+                return false;
+              }
+
+              function openDatepicker() {
+                try {
+                  const activeDatepicker = getActiveDatepicker();
+                  if (activeDatepicker) {
+                    activeDatepicker.focus();
+                    activeDatepicker[0].click();
+                    console.log(
+                      `Opened datepicker: ${activeDatepicker.attr("id")}`
+                    );
+                    return true;
+                  }
+                  console.error("No visible datepicker found");
+                  return false;
+                } catch (error) {
+                  console.error("Error opening datepicker:", error);
+                  return false;
+                }
+              }
+
+              function debugDatepicker() {
                 const activeDatepicker = getActiveDatepicker();
                 if (activeDatepicker) {
-                  activeDatepicker.focus();
-                  activeDatepicker[0].click();
+                  const datepickerState = {
+                    id: activeDatepicker.attr("id"),
+                    isVisible: $("#ui-datepicker-div").is(":visible"),
+                    value: activeDatepicker.val(),
+                    readonly: activeDatepicker.prop("readonly"),
+                    hasDatepicker: activeDatepicker.hasClass("hasDatepicker"),
+                  };
+                  console.log("Active datepicker state:", datepickerState);
+                } else {
+                  console.log("No active datepicker found");
+                }
+              }
+
+              function checkIfDateSelected() {
+                const activeDatepicker = getActiveDatepicker();
+                if (activeDatepicker && activeDatepicker.val()) {
                   console.log(
-                    `Opened datepicker: ${activeDatepicker.attr("id")}`
+                    `Date selected in ${activeDatepicker.attr(
+                      "id"
+                    )}: ${activeDatepicker.val()}`
                   );
+                  dateSelectionComplete(); // Call dateSelectionComplete when date is selected
                   return true;
                 }
-                console.error("No visible datepicker found");
-                return false;
-              } catch (error) {
-                console.error("Error opening datepicker:", error);
                 return false;
               }
-            }
 
-            function debugDatepicker() {
-              const activeDatepicker = getActiveDatepicker();
-              if (activeDatepicker) {
-                const datepickerState = {
-                  id: activeDatepicker.attr("id"),
-                  isVisible: $("#ui-datepicker-div").is(":visible"),
-                  value: activeDatepicker.val(),
-                  readonly: activeDatepicker.prop("readonly"),
-                  hasDatepicker: activeDatepicker.hasClass("hasDatepicker"),
-                };
-                console.log("Active datepicker state:", datepickerState);
-              } else {
-                console.log("No active datepicker found");
-              }
-            }
-
-            function checkIfDateSelected() {
-              const activeDatepicker = getActiveDatepicker();
-              if (activeDatepicker && activeDatepicker.val()) {
-                console.log(
-                  `Date selected in ${activeDatepicker.attr(
-                    "id"
-                  )}: ${activeDatepicker.val()}`
-                );
-                dateSelectionComplete(); // Call dateSelectionComplete when date is selected
-                return true;
-              }
-              return false;
-            }
-
-            function removeDatepickerFocus() {
-              const activeDatepicker = getActiveDatepicker();
-              if (activeDatepicker) {
-                activeDatepicker.blur();
-                console.log(
-                  `Removed focus from ${activeDatepicker.attr("id")}`
-                );
-              }
-            }
-
-            const maxAttempts = 10;
-            let attempts = 0;
-            let datepickerOpened = false;
-
-            const interval = setInterval(() => {
-              debugDatepicker();
-
-              if (checkIfDateSelected()) {
-                console.log(
-                  "[Date Selection] Target date successfully selected"
-                );
-                removeDatepickerFocus();
-                clearInterval(interval);
-                return;
+              function removeDatepickerFocus() {
+                const activeDatepicker = getActiveDatepicker();
+                if (activeDatepicker) {
+                  activeDatepicker.blur();
+                  console.log(
+                    `Removed focus from ${activeDatepicker.attr("id")}`
+                  );
+                }
               }
 
-              if (attempts >= maxAttempts) {
-                console.error("Failed to select date after maximum attempts");
-                removeDatepickerFocus();
-                clearInterval(interval);
-                return;
-              }
+              const maxAttempts = 10;
+              let attempts = 0;
+              let datepickerOpened = false;
 
-              if (!datepickerOpened) {
-                datepickerOpened = openDatepicker();
+              const interval = setInterval(() => {
+                debugDatepicker();
+
+                if (checkIfDateSelected()) {
+                  console.log(
+                    "[Date Selection] Target date successfully selected"
+                  );
+                  removeDatepickerFocus();
+                  clearInterval(interval);
+                  return;
+                }
+
+                if (attempts >= maxAttempts) {
+                  console.error("Failed to select date after maximum attempts");
+                  removeDatepickerFocus();
+                  clearInterval(interval);
+                  return;
+                }
+
+                if (!datepickerOpened) {
+                  datepickerOpened = openDatepicker();
+                  attempts++;
+                  return;
+                }
+
+                const calendar = $("#ui-datepicker-div");
+                if (calendar.length && calendar.is(":visible")) {
+                  if (selectDateInCalendar()) {
+                    setTimeout(() => {
+                      if (checkIfDateSelected()) {
+                        console.log("Date selection confirmed successful");
+                        clearInterval(interval);
+                      }
+                    }, 500);
+                  }
+                }
+
                 attempts++;
+              }, 1000);
+            }
+
+            // Function to initiate time selection after date is selected
+            function initiateTimeSelection() {
+              console.log("[Time Selection] Starting time selection process");
+              
+              // Define checkIfTimeSelected first
+              function checkIfTimeSelected() {
+                const timeSelect = $('select[name="time"]');
+                if (timeSelect.length && timeSelect.val()) {
+                  timeSelectionComplete();
+                  return timeSelect.val() !== "";
+                }
+                return false;
+              }
+
+              // Get the target time from the saved data
+              const timeSlots = savedData.timeSlots;
+              if (!timeSlots || timeSlots.length === 0) {
+                console.error("No time slots found in saved data");
                 return;
               }
 
-              const calendar = $("#ui-datepicker-div");
-              if (calendar.length && calendar.is(":visible")) {
-                if (selectDateInCalendar()) {
+              const targetTime = timeSlots; // This will be an array of selected time slots
+              console.log("Retrieved time slots:", targetTime);
+
+              function isTimeAvailable(timeValue) {
+                const timeOption = $('select[name="time"] option').filter(function() {
+                  return $(this).val() === timeValue;
+                });
+
+                const available = timeOption.length > 0 && !timeOption.prop("disabled") && !timeOption.attr("disabled");
+                console.log(`Checking time ${timeValue}: ${available ? "Available" : "Not available"}`);
+                return available;
+              }
+
+              function findNextAvailableTime() {
+                const timeSelect = $('select[name="time"]');
+                if (!timeSelect.length) {
+                  console.log("Time select element not found");
+                  return null;
+                }
+
+                // Check each target time in order
+                for (const time of targetTime) {
+                  if (isTimeAvailable(time)) {
+                    console.log(`Found available time slot: ${time}`);
+                    return time;
+                  }
+                }
+
+                console.log("No available time slots found for any target times");
+                return null;
+              }
+
+              function selectTimeInDropdown() {
+                try {
+                  // First try to select the target time directly
+                  if (isTimeAvailable(targetTime)) {
+                    console.log(`Target time ${targetTime} is available, selecting it`);
+                    return selectTime(targetTime);
+                  }
+
+                  // If target time is not available, find next available time
+                  console.log(`Target time is not available, looking for next available time`);
+                  const nextTime = findNextAvailableTime();
+                  if (!nextTime) {
+                    console.error("No available time slots found");
+                    return false;
+                  }
+
+                  console.log(`Attempting to select next available time: ${nextTime}`);
+                  return selectTime(nextTime);
+                } catch (error) {
+                  console.error("Error selecting time:", error);
+                  return false;
+                }
+              }
+
+              function selectTime(timeValue) {
+                const timeSelect = $('select[name="time"]');
+                if (timeSelect.length) {
+                  timeSelect.val(timeValue);
+                  timeSelect.trigger("change");
+                  console.log(`Successfully selected time: ${timeValue}`);
+                  return true;
+                }
+                return false;
+              }
+
+              function openTimeDropdown() {
+                try {
+                  const timeSelect = $('select[name="time"]');
+                  if (timeSelect.length) {
+                    timeSelect.focus();
+                    timeSelect.trigger("click");
+                    console.log("Opened time dropdown");
+                    return true;
+                  }
+                  console.error("Time select not found");
+                  return false;
+                } catch (error) {
+                  console.error("Error opening time dropdown:", error);
+                  return false;
+                }
+              }
+
+              function debugTimeSelect() {
+                const timeSelectState = {
+                  exists: $('select[name="time"]').length > 0,
+                  value: $('select[name="time"]').val(),
+                  disabled: $('select[name="time"]').prop("disabled"),
+                  optionsCount: $('select[name="time"] option').length,
+                };
+                console.log("Time select state:", timeSelectState);
+              }
+
+              function timeSelectionComplete() {
+                updateState(State.TIME_SELECTED);
+                console.log("Time selection complete");
+                removeTimeSelectFocus();
+
+                console.log("Waiting 2 seconds before inputting player details");
+                setTimeout(inputPlayerDetails, 2000);
+              }
+
+              function removeTimeSelectFocus() {
+                const timeSelect = $('select[name="time"]');
+                if (timeSelect.length) {
+                  timeSelect.blur();
+                  console.log("Removed focus from time select");
+                }
+              }
+
+              // Main execution logic
+              const maxAttempts = 5;
+              let attempts = 0;
+              let dropdownOpened = false;
+
+              const interval = setInterval(() => {
+                debugTimeSelect();
+
+                // Check if time is already selected correctly
+                if (checkIfTimeSelected()) {
+                  console.log("Time successfully selected, stopping script");
+                  removeTimeSelectFocus();
+                  clearInterval(interval);
+                  return;
+                }
+
+                if (attempts >= maxAttempts) {
+                  console.error("Failed to select time after maximum attempts");
+                  removeTimeSelectFocus();
+                  clearInterval(interval);
+                  return;
+                }
+
+                // First try to open the dropdown if not already opened
+                if (!dropdownOpened) {
+                  dropdownOpened = openTimeDropdown();
+                  attempts++;
+                  return;
+                }
+
+                // Try to select time
+                if (selectTimeInDropdown()) {
+                  // Wait a short moment to verify the selection was successful
                   setTimeout(() => {
-                    if (checkIfDateSelected()) {
-                      console.log("Date selection confirmed successful");
+                    if (checkIfTimeSelected()) {
+                      console.log("Time selection confirmed successful");
+                      removeTimeSelectFocus();
                       clearInterval(interval);
                     }
                   }, 500);
                 }
-              }
 
-              attempts++;
-            }, 1000);
-          }
-
-          // Function to initiate time selection after date is selected
-          function initiateTimeSelection() {
-            console.log("[Time Selection] Starting time selection process");
-            const targetTime = ["14:30", "14:40", "14:50"];
-
-            function isTimeAvailable(timeValue) {
-              const timeOption = $('select[name="time"] option').filter(
-                function () {
-                  return $(this).val() === timeValue;
-                }
-              );
-
-              const available =
-                timeOption.length > 0 &&
-                !timeOption.prop("disabled") &&
-                !timeOption.attr("disabled");
-
-              console.log(
-                `Checking time ${timeValue}: ${
-                  available ? "Available" : "Not available"
-                }`
-              );
-              return available;
+                attempts++;
+              }, 1000);
             }
-
-            function findNextAvailableTime() {
-              const timeSelect = $('select[name="time"]');
-              if (!timeSelect.length) {
-                console.log("Time select element not found");
-                return null;
-              }
-
-              // Check each target time in order
-              for (const time of targetTime) {
-                if (isTimeAvailable(time)) {
-                  console.log(`Found available time slot: ${time}`);
-                  return time;
-                }
-              }
-
-              console.log("No available time slots found for any target times");
-              return null;
-            }
-
-            function selectTimeInDropdown() {
-              try {
-                // First try to select the target time directly
-                if (isTimeAvailable(targetTime)) {
-                  console.log(
-                    `Target time ${targetTime} is available, selecting it`
-                  );
-                  return selectTime(targetTime);
-                }
-
-                // If target time is not available, find next available time
-                console.log(
-                  `Target time is not available, looking for next available time`
-                );
-                const nextTime = findNextAvailableTime();
-                if (!nextTime) {
-                  console.error("No available time slots found");
-                  return false;
-                }
-
-                console.log(
-                  `Attempting to select next available time: ${nextTime}`
-                );
-                return selectTime(nextTime);
-              } catch (error) {
-                console.error("Error selecting time:", error);
-                return false;
-              }
-            }
-
-            function selectTime(timeValue) {
-              const timeSelect = $('select[name="time"]');
-              if (timeSelect.length) {
-                timeSelect.val(timeValue);
-                timeSelect.trigger("change");
-                console.log(`Successfully selected time: ${timeValue}`);
-                return true;
-              }
-              return false;
-            }
-
-            function openTimeDropdown() {
-              try {
-                const timeSelect = $('select[name="time"]');
-                if (timeSelect.length) {
-                  timeSelect.focus();
-                  timeSelect.trigger("click");
-                  console.log("Opened time dropdown");
-                  return true;
-                }
-                console.error("Time select not found");
-                return false;
-              } catch (error) {
-                console.error("Error opening time dropdown:", error);
-                return false;
-              }
-            }
-
-            function debugTimeSelect() {
-              const timeSelectState = {
-                exists: $('select[name="time"]').length > 0,
-                value: $('select[name="time"]').val(),
-                disabled: $('select[name="time"]').prop("disabled"),
-                optionsCount: $('select[name="time"] option').length,
-              };
-              console.log("Time select state:", timeSelectState);
-            }
-
-            function checkIfTimeSelected() {
-              const timeSelect = $('select[name="time"]');
-              if (timeSelect.length && timeSelect.val()) {
-                return timeSelect.val() !== "";
-              }
-              return false;
-            }
-
-            function removeTimeSelectFocus() {
-              const timeSelect = $('select[name="time"]');
-              if (timeSelect.length) {
-                timeSelect.blur();
-                console.log("Removed focus from time select");
-              }
-            }
-
-            let player1f = inputValues.member1_firstname;
-            let player1l = inputValues.member1_lastname;
-            // Member 3 is the user's companionl
-            let player2f = inputValues.member2_firstname;
-            let player2l = inputValues.member2_lastname;
-            // Member 4 is the user's companion
-            let player3f = inputValues.member3_firstname;
-            let player3l = inputValues.member3_lastname;
 
             function inputPlayerDetails() {
-              // Wait for time selection to complete
-              if (!checkIfTimeSelected()) {
-                setTimeout(inputPlayerDetails, 3000);
-                return;
-              }
-
               console.log("Starting player input process");
 
-              // Function to input player details
+              // Get player details from savedData, with proper error handling
+              const members = savedData?.members || {};
+
+              // Get player details, defaulting to empty strings if not found
+              const player2_firstName = members.member2?.firstName || "";
+              const player2_lastName = members.member2?.lastName || "";
+              const player3_firstName = members.member3?.firstName || "";
+              const player3_lastName = members.member3?.lastName || "";
+              const player4_firstName = members.member4?.firstName || "";
+              const player4_lastName = members.member4?.lastName || "";
+
+              // Function to safely input player details
               function inputPlayer(number, firstName, lastName) {
                 const firstNameField = document.querySelector(
                   `input[name="player${number}f"]`
@@ -1105,77 +1376,38 @@ setTimeout(function () {
                 );
 
                 if (firstNameField && lastNameField) {
-                  firstNameField.focus();
-                  firstNameField.value = firstName;
-                  firstNameField.dispatchEvent(new Event("input"));
-
-                  lastNameField.focus();
-                  lastNameField.value = lastName;
-                  lastNameField.dispatchEvent(new Event("input"));
-
-                  console.log(`Player ${number} details input complete`);
-                  return true;
-                }
-                return false;
-              }
-
-              // Sequence the player inputs
-              setTimeout(() => inputPlayer(1, player1f, player1l), 1000);
-              setTimeout(() => inputPlayer(2, player2f, player2l), 2000);
-              setTimeout(() => inputPlayer(3, player3f, player3l), 3000);
-            }
-
-            // Start the player input process after time selection
-            inputPlayerDetails();
-            // Main execution logic
-            const maxAttempts = 5;
-            let attempts = 0;
-            let dropdownOpened = false;
-
-            const interval = setInterval(() => {
-              debugTimeSelect();
-
-              // Check if time is already selected correctly
-              if (checkIfTimeSelected()) {
-                console.log("Time successfully selected, stopping script");
-                removeTimeSelectFocus();
-                clearInterval(interval);
-
-                // Start the companion details input
-                setTimeout(inputCompanionDetails, 2000);
-                return;
-              }
-
-              if (attempts >= maxAttempts) {
-                console.error("Failed to select time after maximum attempts");
-                removeTimeSelectFocus();
-                clearInterval(interval);
-                return;
-              }
-
-              // First try to open the dropdown if not already opened
-              if (!dropdownOpened) {
-                dropdownOpened = openTimeDropdown();
-                attempts++;
-                return;
-              }
-
-              // Try to select time
-              if (selectTimeInDropdown()) {
-                // Wait a short moment to verify the selection was successful
-                setTimeout(() => {
-                  if (checkIfTimeSelected()) {
-                    console.log("Time selection confirmed successful");
-                    removeTimeSelectFocus();
-                    clearInterval(interval);
+                  if (firstName) {
+                    firstNameField.value = firstName;
+                    firstNameField.dispatchEvent(new Event("input"));
                   }
-                }, 500);
+                  if (lastName) {
+                    lastNameField.value = lastName;
+                    lastNameField.dispatchEvent(new Event("input"));
+                  }
+                  console.log(`Player ${number} details processed`);
+                }
               }
 
-              attempts++;
-            }, 1000);
-          }
+              // Sequence the player inputs with proper delays
+              setTimeout(
+                () => inputPlayer(1, player2_firstName, player2_lastName),
+                1000
+              );
+              setTimeout(
+                () => inputPlayer(2, player3_firstName, player3_lastName),
+                2000
+              );
+              setTimeout(
+                () => inputPlayer(3, player4_firstName, player4_lastName),
+                3000
+              );
 
+              // Continue with the booking process after player inputs
+              setTimeout(() => {
+                console.log("Player input process completed");
+              }, 4000);
+            }
+          }
           // Start the sequence with course selection
           setTimeout(selectCourse, 3000);
         } else {
@@ -1186,29 +1418,85 @@ setTimeout(function () {
       }
     }
 
-    // Add this function to handle stopping the automation
-    function stopAutomation() {
-      // Clear any running timers or automation processes
-      if (window.automationTimer) {
-        clearTimeout(window.automationTimer);
-        window.automationTimer = null;
-      }
-
-      // Reset automation state and next run time
-      isAutomationActive = false;
-      nextScheduledRun = null;
-      const updateRunMsg =
-        "No date and time scheduled, please run the automation again";
-      updateNextRunDisplay(updateRunMsg);
-
-      // Additional cleanup code can be added here
-    }
-
     // Initialize GUI when page loads
     if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", createFloatingGUI);
+      document.addEventListener("DOMContentLoaded", () => {
+        createFloatingGUI();
+        // Add notification after GUI creation
+        const notification = document.createElement("div");
+        notification.innerHTML = `
+          <div id="initNotification" style="
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10000;
+            font-family: Arial, sans-serif;
+            animation: slideIn 0.5s ease-out, fadeOut 0.5s ease-out 4.5s forwards;
+          ">
+            <div style="font-weight: bold; margin-bottom: 5px;">✅ Script Initialized</div>
+            <div style="font-size: 13px;">Teetime Automation is ready to use</div>
+          </div>
+          <style>
+            @keyframes slideIn {
+              from { transform: translateX(100%); opacity: 0; }
+              to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes fadeOut {
+              from { opacity: 1; }
+              to { opacity: 0; }
+            }
+          </style>
+        `;
+        document.body.appendChild(notification);
+
+        // Remove notification after 5 seconds
+        setTimeout(() => {
+          notification.remove();
+        }, 5000);
+      });
     } else {
       createFloatingGUI();
+      // Add same notification for already loaded state
+      const notification = document.createElement("div");
+      notification.innerHTML = `
+        <div id="initNotification" style="
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #4CAF50;
+          color: white;
+          padding: 15px 25px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          z-index: 10000;
+          font-family: Arial, sans-serif;
+          animation: slideIn 0.5s ease-out, fadeOut 0.5s ease-out 4.5s forwards;
+        ">
+          <div style="font-weight: bold; margin-bottom: 5px;">✅ Script Initialized</div>
+          <div style="font-size: 13px;">Teetime Automation is ready to use</div>
+        </div>
+        <style>
+          @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+          @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+          }
+        </style>
+      `;
+      document.body.appendChild(notification);
+
+      // Remove notification after 5 seconds
+      setTimeout(() => {
+        notification.remove();
+      }, 5000);
     }
   })();
 }, 1000);
