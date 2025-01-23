@@ -407,10 +407,6 @@ setTimeout(function () {
         // Enable all form inputs
         setFormFieldsState(true);
 
-        // Update state to STOP
-        currentState = State.STOP;
-        localStorage.setItem("automationState", State.STOP);
-
         // Keep the existing data but mark as inactive
         const existingData = getAutomationData();
         if (existingData) {
@@ -708,6 +704,7 @@ setTimeout(function () {
 
     function clearAutomationData() {
       localStorage.removeItem("teetime_state");
+      localStorage.removeItem("automationState");
     }
 
     // Currently not used
@@ -831,7 +828,7 @@ setTimeout(function () {
       }
 
       clearAutomationData();
-      localStorage.removeItem("automationState");
+      localStorage.setItem("automationState", State.STOP);
       isAutomationActive = false;
       nextScheduledRun = null;
 
@@ -928,6 +925,7 @@ setTimeout(function () {
         }
       }, 2000);
     })();
+
 
     // Update this function to handle both setting and clearing the next run display
     function updateNextRunDisplay(customMessage = null) {
@@ -1165,23 +1163,65 @@ setTimeout(function () {
               function selectDateInCalendar() {
                 try {
                   // Try to select the target date only
-                  if (
-                    isDateAvailable(
-                      targetDate.year,
-                      targetDate.month,
-                      targetDate.day
-                    )
-                  ) {
+                  if (isDateAvailable(targetDate.year, targetDate.month, targetDate.day)) {
                     console.log(
                       `Target date ${targetDate.year}-${targetDate.month + 1}-${
                         targetDate.day
                       } is available, selecting it`
                     );
-                    return clickDate(
-                      targetDate.year,
-                      targetDate.month,
-                      targetDate.day
-                    );
+
+                    // Create a mutation observer to watch for changes
+                    const observer = new MutationObserver((mutations) => {
+                      mutations.forEach((mutation) => {
+                        if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+                          mutation.addedNodes.forEach((node) => {
+                            // Check if the node is an element and has textContent
+                            if (node.nodeType === 1 && node.textContent) {
+                              const content = node.textContent;
+                              
+                              // Check for script tags with alert text
+                              if (node.tagName === 'SCRIPT' && 
+                                  content.includes('alert') && 
+                                  (content.includes('MAINTENANCE DAY') || content.includes('FULLY BOOKED'))) {
+                                
+                                // Determine the type of alert
+                                const isMaintenanceDay = content.includes('MAINTENANCE DAY');
+                                console.log(`Detected ${isMaintenanceDay ? 'maintenance day' : 'fully booked'} alert`);
+                                
+                                // Disconnect the observer
+                                observer.disconnect();
+                                
+                                // Handle the error
+                                handleDateError(isMaintenanceDay ? "Maintenance Day" : "Fully Booked");
+                                return;
+                              }
+                            }
+                          });
+                        }
+                      });
+                    });
+
+                    // Start observing the document with the configured parameters
+                    observer.observe(document.body, {
+                      childList: true,
+                      subtree: true,
+                      characterData: true
+                    });
+
+                    // Click the date
+                    const dateSelected = clickDate(targetDate.year, targetDate.month, targetDate.day);
+                    if (!dateSelected) {
+                      observer.disconnect();
+                      console.log("Failed to click date");
+                      return false;
+                    }
+
+                    // Set a timeout to disconnect the observer after 5 seconds
+                    setTimeout(() => {
+                      observer.disconnect();
+                    }, 5000);
+
+                    return true;
                   }
 
                   // If target date is not available, log and terminate
@@ -1190,29 +1230,11 @@ setTimeout(function () {
                       targetDate.day
                     } is not available`
                   );
-                  console.log(
-                    "Script terminating as requested date is unavailable"
-                  );
-                  removeDatepickerFocus();
-                  clearInterval(interval);
-
-                  // Enable the start button and disable the stop button
-                  setButtonState("startBtn", true);
-                  setButtonState("stopBtn", false);
-
-                  // Set the form fields to be editable
-                  setFormFieldsState(true);
-
-                  // Show a notification that the automation is stopped
-                  showNotification(
-                    "warning",
-                    "⚠️ Automation Stopped",
-                    "Settings preserved - Click Start to resume"
-                  );
-
+                  handleDateError("Date Unavailable");
                   return false;
                 } catch (error) {
                   console.error("Error selecting date:", error);
+                  handleDateError("Selection Error");
                   return false;
                 }
               }
@@ -1686,6 +1708,7 @@ setTimeout(function () {
               "✅ First Time Setup",
               "Teetime Automation is ready to use"
             );
+            localStorage.removeItem("teetime_state");
             return;
           } else if (
             pageType === "booking-page" &&
@@ -1753,6 +1776,43 @@ setTimeout(function () {
           );
         }
       }, 3000);
+    }
+
+    // Helper function to handle all date selection errors
+    function handleDateError(errorType) {
+      console.log(`Script terminating - ${errorType}`);
+      removeDatepickerFocus();
+      clearInterval(interval);
+
+      // Enable the start button and disable the stop button
+      setButtonState("startBtn", true);
+      setButtonState("stopBtn", false);
+
+      // Set the form fields to be editable
+      setFormFieldsState(true);
+
+      // Show appropriate notification based on error type
+      let notificationMessage = "";
+      switch (errorType) {
+        case "Maintenance Day":
+          notificationMessage = "Selected date is a maintenance day";
+          break;
+        case "Fully Booked":
+          notificationMessage = "Selected date is fully booked";
+          break;
+        case "Date Unavailable":
+          notificationMessage = "Selected date is not available";
+          break;
+        default:
+          notificationMessage = "Error selecting date";
+      }
+
+      // Show a notification that the automation is stopped
+      showNotification(
+        "warning",
+        "⚠️ Automation Stopped",
+        `${notificationMessage} - Click Start to resume`
+      );
     }
   })();
 }, 1000);
