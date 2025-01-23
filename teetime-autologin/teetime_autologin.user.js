@@ -317,7 +317,7 @@ setTimeout(function () {
 
     // Setup the event listeners for the GUI
     function setupGUIEventListeners() {
-      // Initial button states - will be updated by checkExistingAutomation
+      // Initial button states
       setButtonState("startBtn", true);
       setButtonState("stopBtn", false);
 
@@ -327,7 +327,6 @@ setTimeout(function () {
         debugFormValues();
 
         if (validateInputs()) {
-          // Get new form data
           const formData = {
             userName: document.getElementById("username_input")?.value || "",
             password: document.getElementById("password_input")?.value || "",
@@ -361,34 +360,78 @@ setTimeout(function () {
           };
 
           try {
-            localStorage.setItem("teetime_state", JSON.stringify(formData));
-            localStorage.setItem("automationState", State.LOGIN_STARTED);
-            console.log("New data saved successfully:", formData);
+            const pageType = JSON.parse(localStorage.getItem("pageType")); // Parse the JSON string
+            const currentState = localStorage.getItem("automationState");
+            const hasExistingData =
+              localStorage.getItem("teetime_state") !== null;
 
-            // Update button states
-            setButtonState("startBtn", false);
-            setButtonState("stopBtn", true);
-
-            // Disable all form inputs
-            setFormFieldsState(false);
-
-            // Check for existing automation data
-            const existingData = getAutomationData();
+            // Case 1: First time initialization on login page
             if (
-              existingData &&
-              localStorage.getItem("automationState") !== State.STOP
+              !hasExistingData &&
+              pageType === "login-page" &&
+              currentState === State.INIT
             ) {
-              console.log("Resuming existing automation:", existingData);
+              localStorage.setItem("teetime_state", JSON.stringify(formData));
+              localStorage.setItem("automationState", State.LOGIN_STARTED);
+              console.log("New session started - data saved:", formData);
+
+              setButtonState("startBtn", false);
+              setButtonState("stopBtn", true);
+              setFormFieldsState(false);
+
+              setTimeout(startAutomation, 3000);
+              updateStatus("Automation started - Login process initiated");
+            }
+            // Case 2: Resuming from stop state on login page
+            else if (
+              hasExistingData &&
+              pageType === "login-page" &&
+              currentState === State.STOP
+            ) {
+              localStorage.setItem("teetime_state", JSON.stringify(formData));
+              localStorage.setItem("automationState", State.LOGIN_STARTED);
+              console.log("Resuming from login page - data updated:", formData);
+
+              setButtonState("startBtn", false);
+              setButtonState("stopBtn", true);
+              setFormFieldsState(false);
+
+              setTimeout(startAutomation, 3000);
+              updateStatus("Resuming automation from login page");
+            }
+            // Case 3: Resuming from stop state on booking page
+            else if (
+              hasExistingData &&
+              pageType === "booking-page" &&
+              currentState === State.STOP
+            ) {
+              localStorage.setItem("teetime_state", JSON.stringify(formData));
+              localStorage.setItem("automationState", State.BOOKING_STARTED);
+              console.log(
+                "Resuming from booking page - data updated:",
+                formData
+              );
+
+              setButtonState("startBtn", false);
+              setButtonState("stopBtn", true);
+              setFormFieldsState(false);
+
+              setTimeout(startAutomation, 3000);
+              updateStatus("Resuming automation from booking page");
+            }
+            // Invalid state/page combination
+            else {
+              console.log("Invalid state or page type combination:", {
+                pageType,
+                currentState,
+                hasExistingData,
+              });
               showNotification(
-                "success",
-                "✅ Automation Resumed",
-                "Continuing with existing settings"
+                "warning",
+                "⚠️ Invalid State",
+                "Please refresh the page and try again"
               );
             }
-
-            currentState = State.LOGIN_STARTED;
-            setTimeout(startAutomation, 3000);
-            updateStatus("Trigger time set activated");
           } catch (error) {
             console.error("Error saving data:", error);
             alert("Error saving settings. Please try again.");
@@ -403,6 +446,9 @@ setTimeout(function () {
         // Update button states
         setButtonState("stopBtn", false);
         setButtonState("startBtn", true);
+
+        // Update the state
+        localStorage.setItem("automationState", State.STOP);
 
         // Enable all form inputs
         setFormFieldsState(true);
@@ -703,7 +749,6 @@ setTimeout(function () {
     }
 
     function clearAutomationData() {
-      localStorage.removeItem("teetime_state");
       localStorage.removeItem("automationState");
     }
 
@@ -970,12 +1015,6 @@ setTimeout(function () {
             document.querySelectorAll('input[type="checkbox"]:checked')
           ).map((cb) => cb.value)
         ),
-        member2_firstname: document.getElementById("member2_fn")?.value,
-        member2_lastname: document.getElementById("member2_ln")?.value,
-        member3_firstname: document.getElementById("member3_fn")?.value,
-        member3_lastname: document.getElementById("member3_ln")?.value,
-        member4_firstname: document.getElementById("member4_fn")?.value,
-        member4_lastname: document.getElementById("member4_ln")?.value,
       };
       console.table(inputValues);
       return inputValues;
