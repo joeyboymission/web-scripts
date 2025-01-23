@@ -926,7 +926,6 @@ setTimeout(function () {
       }, 2000);
     })();
 
-
     // Update this function to handle both setting and clearing the next run display
     function updateNextRunDisplay(customMessage = null) {
       const statusDiv = document.getElementById("status");
@@ -1163,63 +1162,61 @@ setTimeout(function () {
               function selectDateInCalendar() {
                 try {
                   // Try to select the target date only
-                  if (isDateAvailable(targetDate.year, targetDate.month, targetDate.day)) {
+                  if (
+                    isDateAvailable(
+                      targetDate.year,
+                      targetDate.month,
+                      targetDate.day
+                    )
+                  ) {
                     console.log(
                       `Target date ${targetDate.year}-${targetDate.month + 1}-${
                         targetDate.day
                       } is available, selecting it`
                     );
 
-                    // Create a mutation observer to watch for changes
-                    const observer = new MutationObserver((mutations) => {
-                      mutations.forEach((mutation) => {
-                        if (mutation.addedNodes && mutation.addedNodes.length > 0) {
-                          mutation.addedNodes.forEach((node) => {
-                            // Check if the node is an element and has textContent
-                            if (node.nodeType === 1 && node.textContent) {
-                              const content = node.textContent;
-                              
-                              // Check for script tags with alert text
-                              if (node.tagName === 'SCRIPT' && 
-                                  content.includes('alert') && 
-                                  (content.includes('MAINTENANCE DAY') || content.includes('FULLY BOOKED'))) {
-                                
-                                // Determine the type of alert
-                                const isMaintenanceDay = content.includes('MAINTENANCE DAY');
-                                console.log(`Detected ${isMaintenanceDay ? 'maintenance day' : 'fully booked'} alert`);
-                                
-                                // Disconnect the observer
-                                observer.disconnect();
-                                
-                                // Handle the error
-                                handleDateError(isMaintenanceDay ? "Maintenance Day" : "Fully Booked");
-                                return;
-                              }
-                            }
-                          });
-                        }
-                      });
-                    });
-
-                    // Start observing the document with the configured parameters
-                    observer.observe(document.body, {
-                      childList: true,
-                      subtree: true,
-                      characterData: true
-                    });
+                    // Override window.alert before clicking
+                    const originalAlert = window.alert;
+                    window.alert = function () {
+                      console.log("Alert suppressed:", arguments[0]);
+                      return true;
+                    };
 
                     // Click the date
-                    const dateSelected = clickDate(targetDate.year, targetDate.month, targetDate.day);
+                    const dateSelected = clickDate(
+                      targetDate.year,
+                      targetDate.month,
+                      targetDate.day
+                    );
                     if (!dateSelected) {
-                      observer.disconnect();
+                      window.alert = originalAlert; // Restore original alert
                       console.log("Failed to click date");
                       return false;
                     }
 
-                    // Set a timeout to disconnect the observer after 5 seconds
+                    // Wait for h4 elements to appear (3 second delay)
                     setTimeout(() => {
-                      observer.disconnect();
-                    }, 5000);
+                      // Restore original alert
+                      window.alert = originalAlert;
+
+                      // Look for specific h4 elements
+                      const h4Elements = document.getElementsByTagName("h4");
+                      for (const h4 of h4Elements) {
+                        const text = h4.textContent || "";
+
+                        if (text.trim() === "MAINTENANCE DAY") {
+                          console.log("Maintenance day h4 detected");
+                          handleDateError("Maintenance Day");
+                          return;
+                        }
+
+                        if (text.trim() === "FULLY BOOKED") {
+                          console.log("Fully booked h4 detected");
+                          handleDateError("Fully Booked");
+                          return;
+                        }
+                      }
+                    }, 3000);
 
                     return true;
                   }
@@ -1317,6 +1314,28 @@ setTimeout(function () {
                   console.log(
                     `Removed focus from ${activeDatepicker.attr("id")}`
                   );
+                  showNotification(
+                    "warning",
+                    "⚠️ Automation Stopped (Date Selection)",
+                    "Settings preserved - Click Start to resume"
+                  );
+
+                  // Update automation state
+                  updateState(State.STOP);
+
+                  // Clear any existing intervals
+                  if (typeof dateSelectionInterval !== "undefined") {
+                    clearInterval(dateSelectionInterval);
+                  }
+
+                  // Set the form fields to be editable
+                  setFormFieldsState(true);
+
+                  // Enable the start button and disable the stop button
+                  setButtonState("startBtn", true);
+                  setButtonState("stopBtn", false);
+
+                  return;
                 }
               }
 
@@ -1324,7 +1343,63 @@ setTimeout(function () {
               let attempts = 0;
               let datepickerOpened = false;
 
-              const interval = setInterval(() => {
+              let dateSelectionInterval;
+
+              function handleDateError(errorType) {
+                console.log(`Script terminating - ${errorType}`);
+
+                // Clear the date selection interval
+                if (dateSelectionInterval) {
+                  clearInterval(dateSelectionInterval);
+                }
+
+                const activeDatepicker = getActiveDatepicker();
+                if (activeDatepicker) {
+                  activeDatepicker.blur();
+                  console.log(
+                    `Removed focus from ${activeDatepicker.attr("id")}`
+                  );
+                }
+
+                // Enable the start button and disable the stop button
+                setButtonState("startBtn", true);
+                setButtonState("stopBtn", false);
+
+                // Set the form fields to be editable
+                setFormFieldsState(true);
+
+                // Update automation state
+                updateState(State.STOP);
+
+                // Show appropriate notification based on error type
+                let notificationMessage = "";
+                switch (errorType) {
+                  case "Maintenance Day":
+                    notificationMessage = "Selected date is a maintenance day";
+                    break;
+                  case "Fully Booked":
+                    notificationMessage = "Selected date is fully booked";
+                    break;
+                  case "Date Unavailable":
+                    notificationMessage = "Selected date is not available";
+                    break;
+                  default:
+                    notificationMessage = "Error selecting date";
+                }
+
+                // Show a notification that the automation is stopped
+                showNotification(
+                  "warning",
+                  "⚠️ Automation Stopped",
+                  `${notificationMessage} - Click Start to resume`
+                );
+
+                // Prevent further execution
+                return false;
+              }
+
+              // Modify the interval assignment
+              dateSelectionInterval = setInterval(() => {
                 debugDatepicker();
 
                 if (checkIfDateSelected()) {
@@ -1332,14 +1407,14 @@ setTimeout(function () {
                     "[Date Selection] Target date successfully selected"
                   );
                   removeDatepickerFocus();
-                  clearInterval(interval);
+                  clearInterval(dateSelectionInterval);
                   return;
                 }
 
                 if (attempts >= maxAttempts) {
                   console.error("Failed to select date after maximum attempts");
                   removeDatepickerFocus();
-                  clearInterval(interval);
+                  clearInterval(dateSelectionInterval);
                   return;
                 }
 
@@ -1355,7 +1430,7 @@ setTimeout(function () {
                     setTimeout(() => {
                       if (checkIfDateSelected()) {
                         console.log("Date selection confirmed successful");
-                        clearInterval(interval);
+                        clearInterval(dateSelectionInterval);
                       }
                     }, 500);
                   }
@@ -1425,19 +1500,6 @@ setTimeout(function () {
 
                 console.log(
                   "No available time slots found for any target times"
-                );
-                // Enable the start button and disable the stop button
-                setButtonState("startBtn", true);
-                setButtonState("stopBtn", false);
-
-                // Set the form fields to be editable
-                setFormFieldsState(true);
-
-                // Show a a notification that the automation is stopped
-                showNotification(
-                  "warning",
-                  "⚠️ Automation Stopped",
-                  "Settings preserved - Click Start to resume"
                 );
                 return null;
               }
@@ -1526,6 +1588,30 @@ setTimeout(function () {
                 if (timeSelect.length) {
                   timeSelect.blur();
                   console.log("Removed focus from time select");
+
+                  // Update automation state
+                  updateState(State.STOP);
+
+                  // Clear any existing intervals
+                  if (typeof timeSelectionInterval !== "undefined") {
+                    clearInterval(timeSelectionInterval);
+                  }
+
+                  // Set the form fields to be editable
+                  setFormFieldsState(true);
+
+                  // Enable the start button and disable the stop button
+                  setButtonState("startBtn", true);
+                  setButtonState("stopBtn", false);
+
+                  // Show a a notification that the automation is stopped
+                  showNotification(
+                    "warning",
+                    "⚠️ Automation Stopped (Time Selection)",
+                    "Settings preserved - Click Start to resume"
+                  );
+
+                  return;
                 }
               }
 
@@ -1534,21 +1620,21 @@ setTimeout(function () {
               let attempts = 0;
               let dropdownOpened = false;
 
-              const interval = setInterval(() => {
+              const timeSelectionInterval = setInterval(() => {
                 debugTimeSelect();
 
                 // Check if time is already selected correctly
                 if (checkIfTimeSelected()) {
                   console.log("Time successfully selected, stopping script");
                   removeTimeSelectFocus();
-                  clearInterval(interval);
+                  clearInterval(timeSelectionInterval);
                   return;
                 }
 
                 if (attempts >= maxAttempts) {
                   console.error("Failed to select time after maximum attempts");
                   removeTimeSelectFocus();
-                  clearInterval(interval);
+                  clearInterval(timeSelectionInterval);
                   return;
                 }
 
@@ -1566,7 +1652,7 @@ setTimeout(function () {
                     if (checkIfTimeSelected()) {
                       console.log("Time selection confirmed successful");
                       removeTimeSelectFocus();
-                      clearInterval(interval);
+                      clearInterval(timeSelectionInterval);
                     }
                   }, 500);
                 }
@@ -1776,43 +1862,6 @@ setTimeout(function () {
           );
         }
       }, 3000);
-    }
-
-    // Helper function to handle all date selection errors
-    function handleDateError(errorType) {
-      console.log(`Script terminating - ${errorType}`);
-      removeDatepickerFocus();
-      clearInterval(interval);
-
-      // Enable the start button and disable the stop button
-      setButtonState("startBtn", true);
-      setButtonState("stopBtn", false);
-
-      // Set the form fields to be editable
-      setFormFieldsState(true);
-
-      // Show appropriate notification based on error type
-      let notificationMessage = "";
-      switch (errorType) {
-        case "Maintenance Day":
-          notificationMessage = "Selected date is a maintenance day";
-          break;
-        case "Fully Booked":
-          notificationMessage = "Selected date is fully booked";
-          break;
-        case "Date Unavailable":
-          notificationMessage = "Selected date is not available";
-          break;
-        default:
-          notificationMessage = "Error selecting date";
-      }
-
-      // Show a notification that the automation is stopped
-      showNotification(
-        "warning",
-        "⚠️ Automation Stopped",
-        `${notificationMessage} - Click Start to resume`
-      );
     }
   })();
 }, 1000);
