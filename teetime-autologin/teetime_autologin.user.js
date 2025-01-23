@@ -99,6 +99,7 @@ setTimeout(function () {
     // State management
     const State = {
       INIT: "INIT",
+      STOP: "STOP",
       LOGIN_STARTED: "LOGIN_STARTED",
       LOGIN_COMPLETED: "LOGIN_COMPLETED",
       BOOKING_STARTED: "BOOKING_STARTED",
@@ -108,13 +109,25 @@ setTimeout(function () {
       BOOKING_COMPLETED: "BOOKING_COMPLETED",
     };
 
+    // Initialize and store the state
+    localStorage.setItem("automationState", State.INIT);
+    let currentState = localStorage.getItem("automationState");
+
+    // Detect the page type
+    const detectPageType = detectPage();
+    localStorage.setItem("pageType", JSON.stringify(detectPageType));
+    console.log("[State Management] Page Type:", detectPageType);
+
+    // Verify state initialization
+    console.log("[State Management] Initial State Set:", currentState);
+    console.log(
+      "[State Management] Verifying localStorage:",
+      localStorage.getItem("automationState")
+    );
+
     // State management
     let isAutomationActive = false;
     let formContainer = null;
-
-    // Get current state or set initial state
-    let currentState = localStorage.getItem("automationState") || State.INIT;
-    console.log("[State Management] Current State:", currentState);
 
     function updateState(newState) {
       currentState = newState;
@@ -304,17 +317,17 @@ setTimeout(function () {
 
     // Setup the event listeners for the GUI
     function setupGUIEventListeners() {
-      // Initial button states
-      setButtonState("startBtn", true); // Start enabled
-      setButtonState("stopBtn", false); // Stop disabled
+      // Initial button states - will be updated by checkExistingAutomation
+      setButtonState("startBtn", true);
+      setButtonState("stopBtn", false);
 
-      // Start button
+      // Start button click handler
       document.getElementById("startBtn")?.addEventListener("click", () => {
         console.log("Start button clicked - checking form values:");
         debugFormValues();
 
         if (validateInputs()) {
-          // Get form data directly
+          // Get new form data
           const formData = {
             userName: document.getElementById("username_input")?.value || "",
             password: document.getElementById("password_input")?.value || "",
@@ -347,20 +360,34 @@ setTimeout(function () {
             },
           };
 
-          // Save directly to localStorage
           try {
             localStorage.setItem("teetime_state", JSON.stringify(formData));
-            console.log("Data saved successfully:", formData);
+            localStorage.setItem("automationState", State.LOGIN_STARTED);
+            console.log("New data saved successfully:", formData);
 
-            // Disable start button, enable stop button
+            // Update button states
             setButtonState("startBtn", false);
             setButtonState("stopBtn", true);
 
-            //triggerStart(); // bypass triggerStart function for debugging
-            //console.log("Trigger start function called");
+            // Disable all form inputs
+            setFormFieldsState(false);
+
+            // Check for existing automation data
+            const existingData = getAutomationData();
+            if (
+              existingData &&
+              localStorage.getItem("automationState") !== State.STOP
+            ) {
+              console.log("Resuming existing automation:", existingData);
+              showNotification(
+                "success",
+                "✅ Automation Resumed",
+                "Continuing with existing settings"
+              );
+            }
+
             currentState = State.LOGIN_STARTED;
             setTimeout(startAutomation, 3000);
-
             updateStatus("Trigger time set activated");
           } catch (error) {
             console.error("Error saving data:", error);
@@ -371,15 +398,37 @@ setTimeout(function () {
         }
       });
 
-      // Stop button
+      // Stop button click handler
       document.getElementById("stopBtn")?.addEventListener("click", () => {
-        // Disable stop button, enable start button
+        // Update button states
         setButtonState("stopBtn", false);
         setButtonState("startBtn", true);
 
+        // Enable all form inputs
+        setFormFieldsState(true);
+
+        // Update state to STOP
+        currentState = State.STOP;
+        localStorage.setItem("automationState", State.STOP);
+
+        // Keep the existing data but mark as inactive
+        const existingData = getAutomationData();
+        if (existingData) {
+          existingData.isAutomationActive = false;
+          localStorage.setItem("teetime_state", JSON.stringify(existingData));
+        }
+
         stopAutomation();
         updateStatus("Automation stopped");
-        console.log("Automation stopped");
+        console.log(
+          "Automation stopped - Data preserved but marked as inactive"
+        );
+
+        showNotification(
+          "warning",
+          "⚠️ Automation Stopped",
+          "Settings preserved - Click Start to resume"
+        );
       });
 
       // Minimize button
@@ -388,6 +437,31 @@ setTimeout(function () {
         if (content) {
           content.style.display =
             content.style.display === "none" ? "block" : "none";
+        }
+      });
+    }
+
+    // Helper function to set form fields state
+    function setFormFieldsState(enabled) {
+      const formFields = [
+        "username_input",
+        "password_input",
+        "triggerTime_input",
+        "courseSelect_input",
+        "bookingDate_input",
+        "timeSlots",
+        "member2_fn",
+        "member2_ln",
+        "member3_fn",
+        "member3_ln",
+        "member4_fn",
+        "member4_ln",
+      ];
+
+      formFields.forEach((id) => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.disabled = !enabled;
         }
       });
     }
@@ -600,20 +674,31 @@ setTimeout(function () {
         }
 
         const data = JSON.parse(rawData);
-        console.log("Retrieved automation data:", data);
-
         // Normalize the data structure to ensure consistency
         return {
-          username: data.userName || data.username, // Handle both cases
-          password: data.password,
-          triggerTime: data.dateTrigger || data.triggerTime, // Handle both cases
-          course: data.selectedCourse || data.course, // Handle both cases
-          bookingDate: data.bookingDate,
-          timeSlots: data.timeSlots,
-          isAutomationActive: data.isAutomationActive,
-          isFormVisible: data.isFormVisible,
-          lastPage: data.lastPage,
-          members: data.members || {},
+          username: data.userName || data.username || "",
+          password: data.password || "",
+          triggerTime: data.dateTrigger || data.triggerTime || "",
+          course: data.selectedCourse || data.course || "",
+          bookingDate: data.bookingDate || "",
+          timeSlots: Array.isArray(data.timeSlots) ? data.timeSlots : [],
+          isAutomationActive: Boolean(data.isAutomationActive),
+          isFormVisible: Boolean(data.isFormVisible),
+          lastPage: data.lastPage || "",
+          members: {
+            member2: {
+              firstName: data.members?.member2?.firstName || "",
+              lastName: data.members?.member2?.lastName || "",
+            },
+            member3: {
+              firstName: data.members?.member3?.firstName || "",
+              lastName: data.members?.member3?.lastName || "",
+            },
+            member4: {
+              firstName: data.members?.member4?.firstName || "",
+              lastName: data.members?.member4?.lastName || "",
+            },
+          },
         };
       } catch (error) {
         console.error("Error getting automation data:", error);
@@ -625,6 +710,7 @@ setTimeout(function () {
       localStorage.removeItem("teetime_state");
     }
 
+    // Currently not used
     // Modify the triggerStart function to ensure data is being saved
     function triggerStart() {
       console.log("triggerStart called");
@@ -690,45 +776,7 @@ setTimeout(function () {
       console.log("Automation scheduled successfully");
     }
 
-    // Modify stopAutomation function
-    function stopAutomation() {
-      if (window.automationTimer) {
-        clearTimeout(window.automationTimer);
-        window.automationTimer = null;
-      }
-
-      clearAutomationData();
-      localStorage.removeItem("automationState");
-      isAutomationActive = false;
-      nextScheduledRun = null;
-
-      const updateRunMsg =
-        "No date and time scheduled, please run the automation again";
-      updateNextRunDisplay(updateRunMsg);
-    }
-
-    // Add initialization check on page load
-    // This will resume the automation if it was previously running
-    (function checkExistingAutomation() {
-      // Check if the page is in the booking page
-      const pageType = detectPage();
-      if (pageType === "login-page") {
-        console.log("Not in the booking page, skipping automation check");
-        return;
-      } else if (pageType === "booking-page") {
-        console.log("In the booking page, checking for existing automation");
-        const savedData = getAutomationData();
-        if (savedData?.isAutomationActive) {
-          console.log("Found existing automation, resuming...");
-          startAutomation();
-        }
-      } else {
-        console.log("Unknown page, skipping automation check");
-        return;
-      }
-    })();
-
-    // Time trigger function
+    // Time trigger function for debugging
     function triggerStart() {
       // Get trigger datetime from input
       const triggerInput = document.getElementById("triggerTime_input");
@@ -774,6 +822,112 @@ setTimeout(function () {
 
       return true;
     }
+
+    // Modify stopAutomation function
+    function stopAutomation() {
+      if (window.automationTimer) {
+        clearTimeout(window.automationTimer);
+        window.automationTimer = null;
+      }
+
+      clearAutomationData();
+      localStorage.removeItem("automationState");
+      isAutomationActive = false;
+      nextScheduledRun = null;
+
+      // const updateRunMsg =
+      //   "No date and time scheduled, please run the automation again";
+      // updateNextRunDisplay(updateRunMsg);
+    }
+
+    // Modified checkExistingAutomation
+    (function checkExistingAutomation() {
+      const pageType = detectPage();
+
+      setTimeout(() => {
+        if (pageType === "booking-page") {
+          console.log("In the booking page, checking for existing automation");
+          const savedData = getAutomationData();
+
+          if (savedData?.isAutomationActive) {
+            console.log("Found existing automation, resuming...");
+            console.log("Saved data:", savedData); // Debug log
+
+            // Restore form values with proper null checks
+            const formFields = {
+              username_input: savedData.username,
+              password_input: savedData.password,
+              triggerTime_input: savedData.triggerTime,
+              courseSelect_input: savedData.course,
+              bookingDate_input: savedData.bookingDate,
+            };
+
+            // Handle time slots separately
+            if (Array.isArray(savedData.timeSlots)) {
+              savedData.timeSlots.forEach((timeSlot) => {
+                const timeCheckbox = document.getElementById(
+                  `time_${timeSlot}`
+                );
+                if (timeCheckbox) {
+                  timeCheckbox.checked = true;
+                }
+              });
+            }
+
+            // Restore basic form fields
+            let allFieldsRestored = true;
+            for (const [id, value] of Object.entries(formFields)) {
+              const element = document.getElementById(id);
+              if (element) {
+                element.value = value || "";
+                console.log(`Restored ${id} with value: ${value || "empty"}`);
+              } else {
+                console.warn(`Element not found for ID: ${id}`);
+                allFieldsRestored = false;
+              }
+            }
+
+            // Restore member details
+            const memberFields = {
+              member2_fn: savedData.members?.member2?.firstName,
+              member2_ln: savedData.members?.member2?.lastName,
+              member3_fn: savedData.members?.member3?.firstName,
+              member3_ln: savedData.members?.member3?.lastName,
+              member4_fn: savedData.members?.member4?.firstName,
+              member4_ln: savedData.members?.member4?.lastName,
+            };
+
+            for (const [id, value] of Object.entries(memberFields)) {
+              const element = document.getElementById(id);
+              if (element) {
+                element.value = value || "";
+                console.log(`Restored ${id} with value: ${value || "empty"}`);
+              } else {
+                console.warn(`Element not found for ID: ${id}`);
+                allFieldsRestored = false;
+              }
+            }
+
+            if (allFieldsRestored) {
+              console.log("All form values successfully restored");
+              setButtonState("startBtn", false);
+              setButtonState("stopBtn", true);
+              setFormFieldsState(false);
+              startAutomation();
+            } else {
+              console.warn("Some form values could not be restored");
+              setButtonState("startBtn", true);
+              setButtonState("stopBtn", false);
+              setFormFieldsState(true);
+            }
+          } else {
+            console.log("No active automation found");
+          }
+        } else {
+          console.log(`${pageType}, skipping automation check`);
+        }
+      }, 2000);
+    })();
 
     // Update this function to handle both setting and clearing the next run display
     function updateNextRunDisplay(customMessage = null) {
@@ -967,7 +1121,7 @@ setTimeout(function () {
                 console.log(
                   "[Time Selection] Waiting 3 second before starting time selection..."
                 );
-                setTimeout(initiateTimeSelection, 3000); 
+                setTimeout(initiateTimeSelection, 3000);
               }
 
               // Array of all possible datepicker IDs
@@ -1041,6 +1195,21 @@ setTimeout(function () {
                   );
                   removeDatepickerFocus();
                   clearInterval(interval);
+
+                  // Enable the start button and disable the stop button
+                  setButtonState("startBtn", true);
+                  setButtonState("stopBtn", false);
+
+                  // Set the form fields to be editable
+                  setFormFieldsState(true);
+
+                  // Show a notification that the automation is stopped
+                  showNotification(
+                    "warning",
+                    "⚠️ Automation Stopped",
+                    "Settings preserved - Click Start to resume"
+                  );
+
                   return false;
                 } catch (error) {
                   console.error("Error selecting date:", error);
@@ -1177,7 +1346,7 @@ setTimeout(function () {
             // Function to initiate time selection after date is selected
             function initiateTimeSelection() {
               console.log("[Time Selection] Starting time selection process");
-              
+
               // Define checkIfTimeSelected first
               function checkIfTimeSelected() {
                 const timeSelect = $('select[name="time"]');
@@ -1199,12 +1368,21 @@ setTimeout(function () {
               console.log("Retrieved time slots:", targetTime);
 
               function isTimeAvailable(timeValue) {
-                const timeOption = $('select[name="time"] option').filter(function() {
-                  return $(this).val() === timeValue;
-                });
+                const timeOption = $('select[name="time"] option').filter(
+                  function () {
+                    return $(this).val() === timeValue;
+                  }
+                );
 
-                const available = timeOption.length > 0 && !timeOption.prop("disabled") && !timeOption.attr("disabled");
-                console.log(`Checking time ${timeValue}: ${available ? "Available" : "Not available"}`);
+                const available =
+                  timeOption.length > 0 &&
+                  !timeOption.prop("disabled") &&
+                  !timeOption.attr("disabled");
+                console.log(
+                  `Checking time ${timeValue}: ${
+                    available ? "Available" : "Not available"
+                  }`
+                );
                 return available;
               }
 
@@ -1223,7 +1401,22 @@ setTimeout(function () {
                   }
                 }
 
-                console.log("No available time slots found for any target times");
+                console.log(
+                  "No available time slots found for any target times"
+                );
+                // Enable the start button and disable the stop button
+                setButtonState("startBtn", true);
+                setButtonState("stopBtn", false);
+
+                // Set the form fields to be editable
+                setFormFieldsState(true);
+
+                // Show a a notification that the automation is stopped
+                showNotification(
+                  "warning",
+                  "⚠️ Automation Stopped",
+                  "Settings preserved - Click Start to resume"
+                );
                 return null;
               }
 
@@ -1231,19 +1424,25 @@ setTimeout(function () {
                 try {
                   // First try to select the target time directly
                   if (isTimeAvailable(targetTime)) {
-                    console.log(`Target time ${targetTime} is available, selecting it`);
+                    console.log(
+                      `Target time ${targetTime} is available, selecting it`
+                    );
                     return selectTime(targetTime);
                   }
 
                   // If target time is not available, find next available time
-                  console.log(`Target time is not available, looking for next available time`);
+                  console.log(
+                    `Target time is not available, looking for next available time`
+                  );
                   const nextTime = findNextAvailableTime();
                   if (!nextTime) {
                     console.error("No available time slots found");
                     return false;
                   }
 
-                  console.log(`Attempting to select next available time: ${nextTime}`);
+                  console.log(
+                    `Attempting to select next available time: ${nextTime}`
+                  );
                   return selectTime(nextTime);
                 } catch (error) {
                   console.error("Error selecting time:", error);
@@ -1294,7 +1493,9 @@ setTimeout(function () {
                 console.log("Time selection complete");
                 removeTimeSelectFocus();
 
-                console.log("Waiting 2 seconds before inputting player details");
+                console.log(
+                  "Waiting 2 seconds before inputting player details"
+                );
                 setTimeout(inputPlayerDetails, 2000);
               }
 
@@ -1418,57 +1619,20 @@ setTimeout(function () {
       }
     }
 
-    // Initialize GUI when page loads
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", () => {
-        createFloatingGUI();
-        // Add notification after GUI creation
-        const notification = document.createElement("div");
-        notification.innerHTML = `
-          <div id="initNotification" style="
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #4CAF50;
-            color: white;
-            padding: 15px 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 10000;
-            font-family: Arial, sans-serif;
-            animation: slideIn 0.5s ease-out, fadeOut 0.5s ease-out 4.5s forwards;
-          ">
-            <div style="font-weight: bold; margin-bottom: 5px;">✅ Script Initialized</div>
-            <div style="font-size: 13px;">Teetime Automation is ready to use</div>
-          </div>
-          <style>
-            @keyframes slideIn {
-              from { transform: translateX(100%); opacity: 0; }
-              to { transform: translateX(0); opacity: 1; }
-            }
-            @keyframes fadeOut {
-              from { opacity: 1; }
-              to { opacity: 0; }
-            }
-          </style>
-        `;
-        document.body.appendChild(notification);
-
-        // Remove notification after 5 seconds
-        setTimeout(() => {
-          notification.remove();
-        }, 5000);
-      });
-    } else {
-      createFloatingGUI();
-      // Add same notification for already loaded state
+    function showNotification(type, message, subMessage) {
       const notification = document.createElement("div");
+      const backgroundColor = {
+        success: "#4CAF50",
+        warning: "#ff9800",
+        error: "#f44336",
+      };
+
       notification.innerHTML = `
         <div id="initNotification" style="
           position: fixed;
           top: 20px;
           right: 20px;
-          background: #4CAF50;
+          background: ${backgroundColor[type]};
           color: white;
           padding: 15px 25px;
           border-radius: 8px;
@@ -1477,8 +1641,8 @@ setTimeout(function () {
           font-family: Arial, sans-serif;
           animation: slideIn 0.5s ease-out, fadeOut 0.5s ease-out 4.5s forwards;
         ">
-          <div style="font-weight: bold; margin-bottom: 5px;">✅ Script Initialized</div>
-          <div style="font-size: 13px;">Teetime Automation is ready to use</div>
+          <div style="font-weight: bold; margin-bottom: 5px;">${message}</div>
+          <div style="font-size: 13px;">${subMessage}</div>
         </div>
         <style>
           @keyframes slideIn {
@@ -1491,12 +1655,104 @@ setTimeout(function () {
           }
         </style>
       `;
-      document.body.appendChild(notification);
 
-      // Remove notification after 5 seconds
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 5000);
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initializeAutomation);
+    } else {
+      initializeAutomation();
+    }
+
+    function initializeAutomation() {
+      createFloatingGUI();
+
+      // Add delay before checking existing automation
       setTimeout(() => {
-        notification.remove();
-      }, 5000);
+        try {
+          const pageType = detectPage();
+          const existingData = getAutomationData();
+          const automationState = localStorage.getItem("automationState");
+
+          // First time initialization
+          if (
+            pageType === "login-page" &&
+            (!existingData || automationState === State.INIT)
+          ) {
+            showNotification(
+              "success",
+              "✅ First Time Setup",
+              "Teetime Automation is ready to use"
+            );
+            return;
+          } else if (
+            pageType === "booking-page" &&
+            automationState === State.INIT
+          ) {
+            showNotification(
+              "success",
+              "✅ Automation Active",
+              "You can now start the booking process"
+            );
+            return;
+          }
+
+          // Active automation cases
+          if (existingData?.isAutomationActive) {
+            const detectPageType = localStorage.getItem("pageType");
+            console.log("[State Management] Page Type:", detectPageType);
+            if (
+              pageType === "booking-page" &&
+              detectPageType === "booking-page" &&
+              (automationState === State.BOOKING_STARTED ||
+                automationState === State.COURSE_SELECTED ||
+                automationState === State.DATE_SELECTED ||
+                automationState === State.TIME_SELECTED)
+            ) {
+              showNotification(
+                "success",
+                "✅ Automation Active",
+                "Booking process is in progress"
+              );
+            } else if (pageType === "login-page") {
+              showNotification(
+                "warning",
+                "⚠️ Session Expired",
+                "Please log in to continue automation"
+              );
+            }
+            return;
+          }
+
+          // Existing data but inactive automation
+          if (existingData && !existingData.isAutomationActive) {
+            showNotification(
+              "warning",
+              "⚠️ Automation Paused",
+              "Click Start to resume automation"
+            );
+            return;
+          }
+
+          // Unknown or error states
+          if (pageType === "unknown-page") {
+            showNotification(
+              "error",
+              "❌ Navigation Error",
+              "Unable to determine current page"
+            );
+          }
+        } catch (error) {
+          console.error("Initialization error:", error);
+          showNotification(
+            "error",
+            "❌ Something went wrong",
+            "Please refresh the page or try again later"
+          );
+        }
+      }, 3000);
     }
   })();
 }, 1000);
