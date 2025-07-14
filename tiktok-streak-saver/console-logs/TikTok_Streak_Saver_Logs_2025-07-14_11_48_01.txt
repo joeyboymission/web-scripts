@@ -1,0 +1,105 @@
+TikTok Streak Saver - Console Log Export
+Export Date: 2025-07-14 11:48:01
+Total Entries: 100
+======================================================
+
+[2025-07-14 11:46:52] TikTok Streak Saver: 💬 Sending streak message to Uiharu...
+[2025-07-14 11:46:52] TikTok Streak Saver: Found message input area, starting CLIPBOARD-ONLY system...
+[2025-07-14 11:46:52] TikTok Streak Saver: Using message: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥"
+[2025-07-14 11:46:52] TikTok Streak Saver: 🎯 Strategy: CLIPBOARD PASTE method ONLY (user discovery: copy-paste triggers send button!)
+[2025-07-14 11:46:52] TikTok Streak Saver: 🚀 === CLIPBOARD PASTE METHOD (ONLY METHOD) ===
+[2025-07-14 11:46:52] TikTok Streak Saver: 📋 Using clipboard paste as the ONLY method based on user discovery!
+[2025-07-14 11:46:52] TikTok Streak Saver: 📋 Clipboard Attempt 1/5 - Copy-paste method...
+[2025-07-14 11:46:52] TikTok Streak Saver: 📋 Starting clipboard paste simulation for: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥"
+[2025-07-14 11:46:52] TikTok Streak Saver: ❌ Error copying to clipboard: Failed to execute 'writeText' on 'Clipboard': Document is not focused.
+[2025-07-14 11:46:52] TikTok Streak Saver: ❌ Failed to copy text to clipboard
+[2025-07-14 11:46:53] TikTok Streak Saver: 🔍 Checking clipboard paste content: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥"
+[2025-07-14 11:46:53] TikTok Streak Saver: ✅ Clipboard paste verified: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥" (attempt 1)
+[2025-07-14 11:46:53] TikTok Streak Saver: ⏳ Waiting for send button to appear after clipboard paste...
+[2025-07-14 11:46:57] TikTok Streak Saver: ❌ Send button not found with any selector
+[2025-07-14 11:46:57] TikTok Streak Saver: ❌ Send button not found after clipboard paste (attempt 1)
+[2025-07-14 11:46:57] TikTok Streak Saver: ⏳ Waiting before next clipboard attempt...
+[2025-07-14 11:47:00] TikTok Streak Saver: 📋 Clipboard Attempt 2/5 - Copy-paste method...
+[2025-07-14 11:47:00] TikTok Streak Saver: 📋 Starting clipboard paste simulation for: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥"
+[2025-07-14 11:47:00] TikTok Streak Saver: ❌ Error copying to clipboard: Failed to execute 'writeText' on 'Clipboard': Document is not focused.
+[2025-07-14 11:47:00] TikTok Streak Saver: ❌ Failed to copy text to clipboard
+[2025-07-14 11:47:02] TikTok Streak Saver: 🔍 Checking clipboard paste content: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥"
+[2025-07-14 11:47:02] TikTok Streak Saver: ✅ Clipboard paste verified: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥" (attempt 2)
+[2025-07-14 11:47:02] TikTok Streak Saver: ⏳ Waiting for send button to appear after clipboard paste...
+[2025-07-14 11:47:05] TikTok Streak Saver: ❌ Send button not found with any selector
+[2025-07-14 11:47:05] TikTok Streak Saver: ❌ Send button not found after clipboard paste (attempt 2)
+[2025-07-14 11:47:05] TikTok Streak Saver: ⏳ Waiting before next clipboard attempt...
+[2025-07-14 11:47:08] TikTok Streak Saver: 📋 Clipboard Attempt 3/5 - Copy-paste method...
+[2025-07-14 11:47:08] TikTok Streak Saver: 📋 Starting clipboard paste simulation for: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥"
+[2025-07-14 11:47:08] TikTok Streak Saver: ❌ Error copying to clipboard: Failed to execute 'writeText' on 'Clipboard': Document is not focused.
+[2025-07-14 11:47:08] TikTok Streak Saver: ❌ Failed to copy text to clipboard
+[2025-07-14 11:47:10] TikTok Streak Saver: 🔍 Checking clipboard paste content: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥"
+[2025-07-14 11:47:10] TikTok Streak Saver: ✅ Clipboard paste verified: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥" (attempt 3)
+[2025-07-14 11:47:10] TikTok Streak Saver: ⏳ Waiting for send button to appear after clipboard paste...
+[2025-07-14 11:47:14] TikTok Streak Saver: ❌ Send button not found with any selector
+[2025-07-14 11:47:14] TikTok Streak Saver: ❌ Send button not found after clipboard paste (attempt 3)
+[2025-07-14 11:47:14] TikTok Streak Saver: ⏳ Waiting before next clipboard attempt...
+[2025-07-14 11:47:17] TikTok Streak Saver: 📋 Clipboard Attempt 4/5 - Copy-paste method...
+[2025-07-14 11:47:17] TikTok Streak Saver: 📋 Starting clipboard paste simulation for: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥"
+[2025-07-14 11:47:17] TikTok Streak Saver: ❌ Error copying to clipboard: Failed to execute 'writeText' on 'Clipboard': Document is not focused.
+[2025-07-14 11:47:17] TikTok Streak Saver: ❌ Failed to copy text to clipboard
+[2025-07-14 11:47:19] TikTok Streak Saver: 🔍 Checking clipboard paste content: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥"
+[2025-07-14 11:47:19] TikTok Streak Saver: ✅ Clipboard paste verified: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥" (attempt 4)
+[2025-07-14 11:47:19] TikTok Streak Saver: ⏳ Waiting for send button to appear after clipboard paste...
+[2025-07-14 11:47:23] TikTok Streak Saver: ❌ Send button not found with any selector
+[2025-07-14 11:47:23] TikTok Streak Saver: ❌ Send button not found after clipboard paste (attempt 4)
+[2025-07-14 11:47:23] TikTok Streak Saver: ⏳ Waiting before next clipboard attempt...
+[2025-07-14 11:47:25] TikTok Streak Saver: 📋 Clipboard Attempt 5/5 - Copy-paste method...
+[2025-07-14 11:47:25] TikTok Streak Saver: 📋 Starting clipboard paste simulation for: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥"
+[2025-07-14 11:47:25] TikTok Streak Saver: ❌ Error copying to clipboard: Failed to execute 'writeText' on 'Clipboard': Document is not focused.
+[2025-07-14 11:47:25] TikTok Streak Saver: ❌ Failed to copy text to clipboard
+[2025-07-14 11:47:26] TikTok Streak Saver: 🔍 Checking clipboard paste content: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥"
+[2025-07-14 11:47:26] TikTok Streak Saver: ✅ Clipboard paste verified: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥" (attempt 5)
+[2025-07-14 11:47:26] TikTok Streak Saver: ⏳ Waiting for send button to appear after clipboard paste...
+[2025-07-14 11:47:30] TikTok Streak Saver: ❌ Send button not found with any selector
+[2025-07-14 11:47:30] TikTok Streak Saver: ❌ Send button not found after clipboard paste (attempt 5)
+[2025-07-14 11:47:30] TikTok Streak Saver: 🚨 === CLIPBOARD METHOD FAILED ===
+[2025-07-14 11:47:30] TikTok Streak Saver: ❌ Clipboard paste method failed after 5 attempts
+[2025-07-14 11:47:30] TikTok Streak Saver: 📊 Total attempts made: 5
+[2025-07-14 11:47:30] TikTok Streak Saver: 🔄 Script terminating and returning to initial state...
+[2025-07-14 11:47:30] TikTok Streak Saver: 🎯 Ready for next execution when user triggers automation again
+[2025-07-14 11:47:30] TikTok Streak Saver: ❌ Failed to send message to Uiharu
+[2025-07-14 11:47:30] TikTok Streak Saver: ⏳ Waiting before next user...
+[2025-07-14 11:47:34] TikTok Streak Saver: --- Processing user 7/7: woogie ---
+[2025-07-14 11:47:34] TikTok Streak Saver: Looking for user: woogie
+[2025-07-14 11:47:34] TikTok Streak Saver: Found chat list container
+[2025-07-14 11:47:34] TikTok Streak Saver: Found 12 users in chat list
+[2025-07-14 11:47:34] TikTok Streak Saver: Found user: woogie!
+[2025-07-14 11:47:34] TikTok Streak Saver: 📱 Opening chat with woogie...
+[2025-07-14 11:47:34] TikTok Streak Saver: Clicking to open chat...
+[2025-07-14 11:47:45] TikTok Streak Saver: 💬 Sending streak message to woogie...
+[2025-07-14 11:47:45] TikTok Streak Saver: Found message input area, starting CLIPBOARD-ONLY system...
+[2025-07-14 11:47:45] TikTok Streak Saver: Using message: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥"
+[2025-07-14 11:47:45] TikTok Streak Saver: 🎯 Strategy: CLIPBOARD PASTE method ONLY (user discovery: copy-paste triggers send button!)
+[2025-07-14 11:47:45] TikTok Streak Saver: 🚀 === CLIPBOARD PASTE METHOD (ONLY METHOD) ===
+[2025-07-14 11:47:45] TikTok Streak Saver: 📋 Using clipboard paste as the ONLY method based on user discovery!
+[2025-07-14 11:47:45] TikTok Streak Saver: 📋 Clipboard Attempt 1/5 - Copy-paste method...
+[2025-07-14 11:47:45] TikTok Streak Saver: 📋 Starting clipboard paste simulation for: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥"
+[2025-07-14 11:47:46] TikTok Streak Saver: 📋 Successfully copied to clipboard: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥"
+[2025-07-14 11:47:46] TikTok Streak Saver: 🖱️ Clicking input field for clipboard paste...
+[2025-07-14 11:47:46] TikTok Streak Saver: ⌨️ Simulating Ctrl+V paste...
+[2025-07-14 11:47:46] TikTok Streak Saver: ✅ Completed clipboard paste simulation for: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥"
+[2025-07-14 11:47:47] TikTok Streak Saver: 🔍 Checking clipboard paste content: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥"
+[2025-07-14 11:47:47] TikTok Streak Saver: ✅ Clipboard paste verified: "If you see this message, it means the automation Streak Saver is working! 🔥🔥🔥" (attempt 1)
+[2025-07-14 11:47:47] TikTok Streak Saver: ⏳ Waiting for send button to appear after clipboard paste...
+[2025-07-14 11:47:50] TikTok Streak Saver: ✅ Send button found using selector: svg[data-e2e='message-send']
+[2025-07-14 11:47:50] TikTok Streak Saver: ✅ SUCCESS: Send button appeared after clipboard method (attempt 1)
+[2025-07-14 11:47:50] TikTok Streak Saver: 🎉 USER DISCOVERY CONFIRMED: Copy-paste method works!
+[2025-07-14 11:47:50] TikTok Streak Saver: 🎉 === CLIPBOARD METHOD SUCCESSFUL ===
+[2025-07-14 11:47:50] TikTok Streak Saver: ✅ Message successfully input using CLIPBOARD PASTE method
+[2025-07-14 11:47:50] TikTok Streak Saver: 📊 Total attempts used: 5 or fewer
+[2025-07-14 11:47:51] TikTok Streak Saver: 📤 PRODUCTION MODE: Clicking send button to send message...
+[2025-07-14 11:47:51] TikTok Streak Saver: ❌ Critical error in sendStreakMessage: sendButton.click is not a function
+[2025-07-14 11:47:51] TikTok Streak Saver: 🔄 Script terminating and returning to initial state...
+[2025-07-14 11:47:51] TikTok Streak Saver: ❌ Failed to send message to woogie
+[2025-07-14 11:47:51] TikTok Streak Saver: === Processing Complete ===
+[2025-07-14 11:47:51] TikTok Streak Saver: 📊 Successfully processed: 0/7 users
+[2025-07-14 11:47:51] TikTok Streak Saver: 🎯 AUTOMATION FINISHED - All priority users have been processed!
+[2025-07-14 11:47:51] TikTok Streak Saver: ✅ PRODUCTION MODE: Messages were sent to users
+[2025-07-14 11:47:51] TikTok Streak Saver: === Automation Completed Successfully ===
+[2025-07-14 11:47:51] TikTok Streak Saver: Button state changed to: Start Automation, Message input enabled

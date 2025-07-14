@@ -443,34 +443,76 @@ setTimeout(function () {
 
       // Stop button click handler
       document.getElementById("stopBtn")?.addEventListener("click", () => {
-        // Update button states
-        setButtonState("stopBtn", false);
-        setButtonState("startBtn", true);
-
-        // Update the state
-        localStorage.setItem("automationState", State.STOP);
-
-        // Enable all form inputs
-        setFormFieldsState(true);
-
         // Keep the existing data but mark as inactive
         const existingData = getAutomationData();
+        const pageType = JSON.parse(localStorage.getItem("pageType"));
+        const currentState = localStorage.getItem("automationState");
+
+        // Case 1: Stop on login page
+        if (
+          pageType === "login-page" &&
+          currentState === State.LOGIN_STARTED &&
+          existingData !== null
+        ) {
+          existingData.isAutomationActive = false;
+          localStorage.setItem("teetime_state", JSON.stringify(existingData));
+          console.log("Automation stopped on login page - data preserved");
+
+          // Update the state
+          localStorage.setItem("automationState", State.STOP);
+
+          // Enable all form inputs
+          setFormFieldsState(true);
+
+          // Update button states
+          setButtonState("startBtn", true);
+          setButtonState("stopBtn", false);
+
+          // Show notification
+          showNotification(
+            "warning",
+            "⚠️ Automation Stopped on Login Page",
+            "Settings preserved - Click Start to resume"
+          );
+          return true;
+        }
+
+        // Case 2: Stop on booking page
+        else if (
+          pageType === "booking-page" &&
+          (currentState === State.BOOKING_STARTED ||
+            currentState === State.COURSE_SELECTED ||
+            currentState === State.DATE_SELECTED ||
+            currentState === State.TIME_SELECTED) &&
+          existingData !== null
+        ) {
+          existingData.isAutomationActive = false;
+          localStorage.setItem("teetime_state", JSON.stringify(existingData));
+          console.log("Automation stopped on booking page - data preserved");
+
+          // Update the state
+          localStorage.setItem("automationState", State.STOP);
+
+          // Enable all form inputs
+          setFormFieldsState(true);
+
+          // Update button states
+          setButtonState("startBtn", true);
+          setButtonState("stopBtn", false);
+
+          // Show notification
+          showNotification(
+            "warning",
+            "⚠️ Automation Stopped on Booking Page",
+            "Settings preserved - Click Start to resume"
+          );
+          return true;
+        }
+
         if (existingData) {
           existingData.isAutomationActive = false;
           localStorage.setItem("teetime_state", JSON.stringify(existingData));
         }
-
-        stopAutomation();
-        updateStatus("Automation stopped");
-        console.log(
-          "Automation stopped - Data preserved but marked as inactive"
-        );
-
-        showNotification(
-          "warning",
-          "⚠️ Automation Stopped",
-          "Settings preserved - Click Start to resume"
-        );
       });
 
       // Minimize button
@@ -749,7 +791,7 @@ setTimeout(function () {
     }
 
     function clearAutomationData() {
-      localStorage.removeItem("automationState");
+      localStorage.removeItem("teetime_state");
     }
 
     // Currently not used
@@ -1028,12 +1070,86 @@ setTimeout(function () {
       }
     }
 
+    // Handle cut-off time
+    // Cut off time is 9:00 AM to 9:00 PM, so expect will not run before 9:00 AM and after 9:00 PM
+    function isCutOffTime() {
+      const now = new Date();
+      const hours = now.getHours();
+
+      // Check if the current time is before 9:00 AM or after 9:00 PM
+      if (hours < 9) {
+        console.log("Cut off time is before 9:00 AM");
+
+        showNotification(
+          "warning",
+          "⚠️ Automation Stopped",
+          "Cut off time is before 9:00 AM"
+        );
+
+        // Stop the automation
+        stopAutomation();
+
+        // Change the button state
+        setButtonState("startBtn", true);
+        setButtonState("stopBtn", false);
+
+        // Enable all form inputs
+        setFormFieldsState(true);
+
+        return true;
+      } else if (hours >= 21) {
+        console.log("Cut off time is after 9:00 PM");
+
+        showNotification(
+          "warning",
+          "⚠️ Automation Stopped",
+          "Cut off time is after 9:00 PM"
+        );
+
+        // Stop the automation
+        stopAutomation();
+
+        // Change the button state
+        setButtonState("startBtn", true);
+        setButtonState("stopBtn", false);
+
+        // Enable all form inputs
+        setFormFieldsState(true);
+
+        return true;
+      }
+      return false;
+    }
+
+    // Wrong username or password function
+    function wrongUsernameOrPassword() {
+      // Return to the login page
+      window.location.href = "https://tagaytayhighlands-teetime.com/";
+
+      // Replace the username and password with the backup credentials
+      document.getElementById("username_input").value = "MG03787-000";
+      document.getElementById("password_input").value = "nobhill2025";
+
+      console.log("Username and password replaced with backup credentials");
+
+      // Return to the startAutomation function
+      setTimeout(startAutomation, 3000);
+    }
+
     // Main function and automation
     function startAutomation() {
       const savedData = getAutomationData();
 
       if (!savedData || !savedData.isAutomationActive) {
         console.log("No active automation found");
+        return;
+      }
+
+      // Check if the user has entered the wrong username or password
+      const detectWrongCredentials = document.querySelector(".modal.wrongpass");
+      if (detectWrongCredentials) {
+        console.log("Wrong username or password detected");
+        wrongUsernameOrPassword();
         return;
       }
 
@@ -1819,14 +1935,15 @@ setTimeout(function () {
       // Add delay before checking existing automation
       setTimeout(() => {
         try {
-          const pageType = detectPage();
+          const pageType = JSON.parse(localStorage.getItem("pageType"));
           const existingData = getAutomationData();
           const automationState = localStorage.getItem("automationState");
 
-          // First time initialization
+          // Case 1: First time initialization
           if (
             pageType === "login-page" &&
-            (!existingData || automationState === State.INIT)
+            !existingData &&
+            automationState === State.INIT
           ) {
             showNotification(
               "success",
@@ -1835,9 +1952,13 @@ setTimeout(function () {
             );
             localStorage.removeItem("teetime_state");
             return;
-          } else if (
+          }
+
+          // Case 2: Booking page initialization
+          else if (
             pageType === "booking-page" &&
-            automationState === State.INIT
+            automationState === State.INIT &&
+            !existingData
           ) {
             showNotification(
               "success",
@@ -1846,6 +1967,30 @@ setTimeout(function () {
             );
             return;
           }
+
+          // // Case 3: Login page resumed from stop state
+          // else if (
+          //   pageType === "login-page" &&
+          //   automationState === State.STOP &&
+          //   existingData
+          // ) {
+          //   showNotification(
+          //     "success",
+          //     "✅ Automation Resumed",
+          //     "Continuing with existing settings"
+          //   );
+          //   return;
+          // }
+
+          // // Case 4: Booking page resumed from stop state
+          // else if (
+          //   pageType === "booking-page" &&
+          //   automationState === State.STOP &&
+          //   existingData
+          // ) {
+          //   showNotification("success", "✅ Automation Resumed", "Continuing with existing settings");
+          //   return;
+          // }
 
           // Active automation cases
           if (existingData?.isAutomationActive) {
@@ -1861,15 +2006,25 @@ setTimeout(function () {
             ) {
               showNotification(
                 "success",
-                "✅ Automation Active",
+                "✅ Automation Resumed on Booking Page",
                 "Booking process is in progress"
               );
-            } else if (pageType === "login-page") {
+            } else if (
+              pageType === "login-page" &&
+              automationState === State.INIT &&
+              existingData !== null
+            ) {
               showNotification(
                 "warning",
                 "⚠️ Session Expired",
                 "Please log in to continue automation"
               );
+
+              // Clear the existing data
+              clearAutomationData();
+
+              // Automatically reload the page
+              location.reload();
             }
             return;
           }
